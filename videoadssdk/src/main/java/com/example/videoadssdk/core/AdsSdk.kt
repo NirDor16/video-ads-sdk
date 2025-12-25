@@ -1,13 +1,14 @@
 package com.example.videoadssdk.core
 
+import android.app.Activity
 import android.content.Context
+import android.content.Intent
 import com.example.videoadssdk.api.AdsApi
 import com.example.videoadssdk.model.Ad
+import com.example.videoadssdk.player.AdPlayerActivity
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
-import android.app.Activity
-import android.content.Intent
-import com.example.videoadssdk.player.AdPlayerActivity
+
 
 object AdsSdk {
 
