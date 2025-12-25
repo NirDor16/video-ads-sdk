@@ -58,5 +58,6 @@ class AdPlayerActivity : AppCompatActivity() {
                 putExtra(EXTRA_VIDEO_URL, videoUrl)
             }
         }
+
     }
 }

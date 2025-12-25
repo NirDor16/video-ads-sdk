@@ -54,11 +54,9 @@ object AdsSdk {
         return resp.ad
     }
     fun showAd(activity: Activity, ad: Ad) {
-        val intent = AdPlayerActivity.createIntent(
-            context = activity,
-            videoUrl = ad.video_url
-        )
+        val intent = AdPlayerActivity.createIntent(activity, ad.video_url)
         activity.startActivity(intent)
     }
+
 
 }
