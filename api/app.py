@@ -2,12 +2,53 @@ import os
 import random
 from datetime import datetime
 
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_from_directory
 from dotenv import load_dotenv
 
-from db import categories_collection, ads_collection
+from db import categories_collection, ads_collection, app_configs_collection
 
 load_dotenv()
+
+DEFAULT_CONFIG = {
+    "categories": ["SPORT", "FOOD", "TECH"],
+    # Trigger types: CLICKS / INTERVAL
+    # CLICKS: show after N clicks
+    # INTERVAL: show every N seconds
+    "trigger": {"type": "CLICKS", "count": 15},
+    "x_delay_seconds": 5
+}
+
+
+def normalize_config(data: dict) -> dict:
+    cfg = dict(DEFAULT_CONFIG)
+
+    # categories
+    cats = data.get("categories")
+    if isinstance(cats, list):
+        cleaned = [str(c).strip().upper() for c in cats if str(c).strip()]
+        if cleaned:
+            cfg["categories"] = cleaned
+
+    # trigger
+    trigger = data.get("trigger", {}) or {}
+    ttype = str(trigger.get("type", cfg["trigger"]["type"])).strip().upper()
+
+    if ttype == "INTERVAL":
+        sec = int(trigger.get("seconds", 120))
+        cfg["trigger"] = {"type": "INTERVAL", "seconds": max(10, sec)}
+    else:
+        cnt = int(trigger.get("count", 15))
+        cfg["trigger"] = {"type": "CLICKS", "count": max(1, cnt)}
+
+    # x delay
+    x_delay = data.get("x_delay_seconds", 5)
+    try:
+        x_delay = int(x_delay)
+    except Exception:
+        x_delay = 5
+    cfg["x_delay_seconds"] = max(0, x_delay)
+
+    return cfg
 
 
 def create_app() -> Flask:
@@ -27,6 +68,40 @@ def create_app() -> Flask:
     def get_categories():
         categories = list(categories_collection.find({}, {"_id": 0}))
         return jsonify({"categories": categories}), 200
+
+    # --------------------
+    # App Config (per app_id)
+    # --------------------
+    @app.get("/v1/apps/<app_id>/config")
+    def get_app_config(app_id: str):
+        app_id = app_id.strip()
+        doc = app_configs_collection.find_one({"app_id": app_id}, {"_id": 0})
+        if not doc:
+            return jsonify({"app_id": app_id, "config": DEFAULT_CONFIG}), 200
+        return jsonify({"app_id": app_id, "config": doc.get("config", DEFAULT_CONFIG)}), 200
+
+    @app.put("/v1/apps/<app_id>/config")
+    def upsert_app_config(app_id: str):
+        app_id = app_id.strip()
+        data = request.get_json(silent=True) or {}
+
+        # allow body either {"config": {...}} or direct {...}
+        raw_cfg = data.get("config", data)
+        cfg = normalize_config(raw_cfg)
+
+        doc = {
+            "app_id": app_id,
+            "config": cfg,
+            "updated_at": datetime.utcnow().isoformat() + "Z",
+        }
+
+        app_configs_collection.update_one(
+            {"app_id": app_id},
+            {"$set": doc},
+            upsert=True
+        )
+
+        return jsonify({"app_id": app_id, "config": cfg}), 200
 
     # --------------------
     # Serve ad
@@ -61,6 +136,8 @@ def create_app() -> Flask:
         candidates = list(ads_collection.find(query, {"_id": 0}))
 
         if not candidates:
+            # NOTE: 204 usually should have empty body,
+            # but we keep body for easier debugging/demos.
             return jsonify({
                 "ad": None,
                 "reason": "NO_FILL",
@@ -106,7 +183,7 @@ def create_app() -> Flask:
         if missing:
             return jsonify({"error": "Missing required fields", "missing": missing}), 400
 
-        ad_id = data["ad_id"].strip()
+        ad_id = str(data["ad_id"]).strip()
 
         if ads_collection.find_one({"ad_id": ad_id}):
             return jsonify({"error": "ad_id already exists", "ad_id": ad_id}), 409
@@ -182,6 +259,14 @@ def create_app() -> Flask:
         if res.deleted_count == 0:
             return jsonify({"error": "Ad not found", "ad_id": ad_id}), 404
         return jsonify({"deleted": True, "ad_id": ad_id}), 200
+
+    # --------------------
+    # Simple Admin Page (static)
+    # --------------------
+    @app.get("/admin")
+    def admin_page():
+        # expects file at: api/static/admin.html
+        return send_from_directory("static", "admin.html")
 
     return app
 

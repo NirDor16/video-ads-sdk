@@ -1,0 +1,85 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Video Ads SDK Admin</title>
+</head>
+<body>
+  <h2>SDK Admin</h2>
+
+  <label>App ID:</label>
+  <input id="appId" value="demo_app" />
+  <button onclick="loadCfg()">Load</button>
+
+  <h3>Categories</h3>
+  <label><input type="checkbox" class="cat" value="SPORT"> SPORT</label><br/>
+  <label><input type="checkbox" class="cat" value="FOOD"> FOOD</label><br/>
+  <label><input type="checkbox" class="cat" value="TECH"> TECH</label><br/>
+
+  <h3>Trigger</h3>
+  <label><input type="radio" name="trg" value="CLICKS" checked> After 15 clicks</label><br/>
+  <label><input type="radio" name="trg" value="INTERVAL"> Every 2 minutes</label><br/>
+
+  <h3>Close (X) delay</h3>
+  <label>Show X after (seconds):</label>
+  <input id="xDelay" type="number" value="5" min="0"/>
+
+  <br/><br/>
+  <button onclick="saveCfg()">Save</button>
+
+  <pre id="out"></pre>
+
+<script>
+const out = (t)=> document.getElementById('out').textContent = t;
+
+function selectedCats(){
+  return [...document.querySelectorAll('.cat:checked')].map(x=>x.value);
+}
+
+function setCats(list){
+  document.querySelectorAll('.cat').forEach(cb=>{
+    cb.checked = list.includes(cb.value);
+  });
+}
+
+function triggerType(){
+  return document.querySelector('input[name="trg"]:checked').value;
+}
+
+async function loadCfg(){
+  const appId = document.getElementById('appId').value.trim();
+  const r = await fetch(`/v1/apps/${encodeURIComponent(appId)}/config`);
+  const j = await r.json();
+  const cfg = j.config;
+
+  setCats(cfg.categories || []);
+  document.querySelectorAll('input[name="trg"]').forEach(r=>{
+    r.checked = (r.value === (cfg.trigger?.type || "CLICKS"));
+  });
+  document.getElementById('xDelay').value = cfg.x_delay_seconds ?? 5;
+
+  out(JSON.stringify(j, null, 2));
+}
+
+async function saveCfg(){
+  const appId = document.getElementById('appId').value.trim();
+  const t = triggerType();
+  const cfg = {
+    categories: selectedCats(),
+    trigger: t === "INTERVAL"
+      ? { type: "INTERVAL", seconds: 120 }
+      : { type: "CLICKS", count: 15 },
+    x_delay_seconds: parseInt(document.getElementById('xDelay').value || "5", 10)
+  };
+
+  const r = await fetch(`/v1/apps/${encodeURIComponent(appId)}/config`, {
+    method:"PUT",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({config: cfg})
+  });
+  const j = await r.json();
+  out(JSON.stringify(j, null, 2));
+}
+</script>
+</body>
+</html>
