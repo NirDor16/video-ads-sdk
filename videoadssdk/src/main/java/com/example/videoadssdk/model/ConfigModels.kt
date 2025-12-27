@@ -13,13 +13,11 @@ data class AppConfig(
 
 /**
  * trigger supports:
- * - CLICKS: use `count` (number of clicks)
- * - INTERVAL: use `seconds` (number of seconds)
- *
- * We keep both fields optional to support backward/forward compatibility.
+ * - CLICKS: use `count`
+ * - INTERVAL: use `seconds`
  */
 data class Trigger(
     val type: String = "CLICKS",
-    val count: Int? = 15,      // used when type=CLICKS
-    val seconds: Int? = null   // used when type=INTERVAL
+    val count: Int? = 15,
+    val seconds: Int? = null
 )

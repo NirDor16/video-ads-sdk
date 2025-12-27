@@ -2,18 +2,16 @@ package com.example.videoadssdk.core
 
 import android.app.Activity
 import android.content.Context
-import android.os.Handler
-import android.os.Looper
 import com.example.videoadssdk.api.AdsApi
 import com.example.videoadssdk.model.Ad
 import com.example.videoadssdk.model.AppConfig
+import com.example.videoadssdk.model.Trigger
+import com.example.videoadssdk.model.UpdateConfigRequest
 import com.example.videoadssdk.player.AdPlayerActivity
 import kotlinx.coroutines.*
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.atomic.AtomicBoolean
-import com.example.videoadssdk.model.Trigger
-import com.example.videoadssdk.model.UpdateConfigRequest
 
 object AdsSdk {
 
@@ -21,7 +19,8 @@ object AdsSdk {
     private lateinit var api: AdsApi
     private lateinit var appId: String
 
-    // server config
+    // server config (source of truth is server, but we keep local copy)
+    @Volatile
     private var config: AppConfig = AppConfig()
 
     // click trigger
@@ -44,7 +43,6 @@ object AdsSdk {
      */
     fun init(context: Context, baseUrl: String, appId: String) {
         this.appId = appId.trim()
-
         val fixedBaseUrl = baseUrl.trim().trimEnd('/') + "/"
 
         api = Retrofit.Builder()
@@ -56,19 +54,8 @@ object AdsSdk {
         initialized = true
     }
 
-    /**
-     * Call this in Activity.onResume()
-     */
-    fun onAppForeground() {
-        isAppOpen.set(true)
-    }
-
-    /**
-     * Call this in Activity.onPause()
-     */
-    fun onAppBackground() {
-        isAppOpen.set(false)
-    }
+    fun onAppForeground() { isAppOpen.set(true) }
+    fun onAppBackground() { isAppOpen.set(false) }
 
     /**
      * Fetch latest config from server
@@ -87,38 +74,27 @@ object AdsSdk {
     }
 
     /**
-     * Call this whenever you want to count a click.
-     * (Only matters when trigger=CLICKS)
+     * Count a click. Only relevant when trigger=CLICKS.
+     * NOTE: This does NOT show ad by itself - call maybeShowAd(activityProvider) too.
      */
     fun registerClick() {
         if (!initialized) return
         if (!isAppOpen.get()) return
-
         if (!config.trigger.type.equals("CLICKS", ignoreCase = true)) return
 
-        val needed = (config.trigger.count ?: 15).coerceAtLeast(1)
         clickCounter++
-
-        if (clickCounter >= needed) {
-            clickCounter = 0
-            // we don't show immediately without an Activity,
-            // so the app should call maybeShowAd(activityProvider) after registerClick()
-        }
     }
 
     /**
-     * Main entry-point for showing ads.
-     *
-     * App should call this after registerClick(), or occasionally (e.g., on screen change),
-     * and provide current Activity.
+     * Main entry point: decide whether to show ad now (CLICKS or INTERVAL).
+     * Call this after registerClick(), and also optionally on screen changes.
      */
     fun maybeShowAd(activityProvider: () -> Activity?) {
         if (!initialized) return
         if (!isAppOpen.get()) return
+        if (isShowing.get()) return
 
-        val type = config.trigger.type.uppercase()
-
-        when (type) {
+        when (config.trigger.type.trim().uppercase()) {
             "CLICKS" -> {
                 val needed = (config.trigger.count ?: 15).coerceAtLeast(1)
                 if (clickCounter >= needed) {
@@ -131,79 +107,24 @@ object AdsSdk {
             "INTERVAL" -> {
                 val seconds = (config.trigger.seconds ?: 120).coerceAtLeast(10)
                 val now = System.currentTimeMillis()
-
-                // if never shown -> allow immediate show
                 val elapsed = now - lastAdShownAtMs
+
                 if (lastAdShownAtMs == 0L || elapsed >= seconds * 1000L) {
                     val act = activityProvider() ?: return
                     scope.launch {
                         requestAndShow(act)
-                        // only update after successful show attempt (best-effort)
                         lastAdShownAtMs = System.currentTimeMillis()
                     }
                 }
             }
 
-            else -> {
-                // unknown trigger type -> do nothing
-            }
+            else -> Unit
         }
     }
 
-    /**
-     * Internal: request ad from /v1/serve using categories from config
-     */
-    private suspend fun requestAd(): Ad? {
-        val categoriesParam = config.categories
-            .map { it.trim().uppercase() }
-            .filter { it.isNotBlank() }
-            .joinToString(",")
-            .takeIf { it.isNotBlank() }
-
-        val resp = withContext(Dispatchers.IO) {
-            api.serveAd(
-                appId = appId,
-                categories = categoriesParam,
-                mode = "RANDOM",
-                adId = null
-            )
-        }
-        return resp.ad
-    }
-
-    /**
-     * Internal: request + show (guarded)
-     */
-    private suspend fun requestAndShow(activity: Activity) {
-        if (!isShowing.compareAndSet(false, true)) return
-
-        try {
-            val ad = requestAd() ?: return
-            showAd(activity, ad)
-        } catch (_: Exception) {
-            // optional: log
-        } finally {
-            isShowing.set(false)
-        }
-    }
-
-    /**
-     * Show fullscreen video ad, X button appears after x_delay_seconds
-     */
-    fun showAd(activity: Activity, ad: Ad) {
-        val xDelay = config.x_delay_seconds.coerceAtLeast(0)
-        val intent = AdPlayerActivity.createIntent(activity, ad.video_url, xDelay)
-        activity.startActivity(intent)
-    }
     /**
      * Developer-controlled preferences:
-     * Updates server config for this appId (PUT) and updates local config.
-     *
-     * categories: list of category ids, e.g. ["SPORT","FOOD"]
-     * triggerType: "CLICKS" or "INTERVAL"
-     * clicksCount: used when triggerType=CLICKS
-     * intervalSeconds: used when triggerType=INTERVAL
-     * xDelaySeconds: seconds until X button enabled
+     * Updates server config (PUT) and refreshes local config from server.
      */
     suspend fun setPreferences(
         categories: List<String>,
@@ -229,24 +150,55 @@ object AdsSdk {
             Trigger(type = "CLICKS", count = cnt, seconds = null)
         }
 
-        val newConfig = config.copy(
+        val newConfig = AppConfig(
             categories = if (cleanedCats.isEmpty()) config.categories else cleanedCats,
             trigger = newTrigger,
             x_delay_seconds = (xDelaySeconds ?: config.x_delay_seconds).coerceAtLeast(0)
         )
 
-        val resp = withContext(Dispatchers.IO) {
+        // update server
+        withContext(Dispatchers.IO) {
             api.updateConfig(appId, UpdateConfigRequest(newConfig))
         }
 
-        // update local config from server response (source of truth)
-        config = resp.config
-
-        // reset counters to match new rules
-        clickCounter = 0
-        lastAdShownAtMs = 0L
-
-        return config
+        // refresh local from server (source of truth)
+        return refreshConfig()
     }
 
+    private suspend fun requestAd(): Ad? {
+        val categoriesParam = config.categories
+            .map { it.trim().uppercase() }
+            .filter { it.isNotBlank() }
+            .joinToString(",")
+            .takeIf { it.isNotBlank() }
+
+        val resp = withContext(Dispatchers.IO) {
+            api.serveAd(
+                appId = appId,
+                categories = categoriesParam,
+                mode = "RANDOM",
+                adId = null
+            )
+        }
+        return resp.ad
+    }
+
+    private suspend fun requestAndShow(activity: Activity) {
+        if (!isShowing.compareAndSet(false, true)) return
+
+        try {
+            val ad = requestAd() ?: return
+            showAd(activity, ad)
+        } catch (_: Exception) {
+            // optional log
+        } finally {
+            isShowing.set(false)
+        }
+    }
+
+    fun showAd(activity: Activity, ad: Ad) {
+        val xDelay = config.x_delay_seconds.coerceAtLeast(0)
+        val intent = AdPlayerActivity.createIntent(activity, ad.video_url, xDelay)
+        activity.startActivity(intent)
+    }
 }
