@@ -34,7 +34,7 @@ class AdPlayerActivity : AppCompatActivity() {
 
         // show X after delay
         uiJob = CoroutineScope(Dispatchers.Main.immediate).launch {
-            delay(xDelaySeconds.coerceAtLeast(0) * 1000L)
+            delay(xDelaySeconds.coerceAtLeast(5) * 1000L)
             btnClose.visibility = View.VISIBLE
             btnClose.isEnabled = true
         }

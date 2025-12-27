@@ -206,7 +206,7 @@ object AdsSdk {
     }
 
     fun showAd(activity: Activity, ad: Ad) {
-        val xDelay = config.x_delay_seconds.coerceAtLeast(0)
+        val xDelay = config.x_delay_seconds.coerceAtLeast(5)
         val intent = AdPlayerActivity.createIntent(activity, ad.video_url, xDelay)
         activity.startActivity(intent)
     }

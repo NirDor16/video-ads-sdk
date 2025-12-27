@@ -6,7 +6,7 @@ data class ConfigResponse(
 )
 
 data class AppConfig(
-    val categories: List<String> = listOf("SPORT", "FOOD", "TECH"),
+    val categories: List<String> = listOf("TV", "CAR", "GAME"),
     val trigger: Trigger = Trigger(type = "CLICKS", count = 15),
     val x_delay_seconds: Int = 5
 )
