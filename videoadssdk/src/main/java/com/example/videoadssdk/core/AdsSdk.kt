@@ -12,7 +12,8 @@ import kotlinx.coroutines.*
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.atomic.AtomicBoolean
-
+import okhttp3.OkHttpClient
+import java.util.concurrent.TimeUnit
 object AdsSdk {
 
     private var initialized = false
@@ -45,8 +46,16 @@ object AdsSdk {
         this.appId = appId.trim()
         val fixedBaseUrl = baseUrl.trim().trimEnd('/') + "/"
 
+        val okHttp = OkHttpClient.Builder()
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .writeTimeout(30, TimeUnit.SECONDS)
+            .callTimeout(60, TimeUnit.SECONDS)
+            .build()
+
         api = Retrofit.Builder()
             .baseUrl(fixedBaseUrl)
+            .client(okHttp)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
             .create(AdsApi::class.java)
