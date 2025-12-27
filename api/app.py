@@ -136,13 +136,13 @@ def create_app() -> Flask:
         candidates = list(ads_collection.find(query, {"_id": 0}))
 
         if not candidates:
-            # NOTE: 204 usually should have empty body,
-            # but we keep body for easier debugging/demos.
             return jsonify({
                 "ad": None,
                 "reason": "NO_FILL",
+                "mode": mode,
+                "app_id": app_id,
                 "requested_categories": requested_categories
-            }), 204
+            }), 200
 
         # 3) Manual mode
         if mode == "MANUAL" and ad_id_param:
