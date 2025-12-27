@@ -10,7 +10,7 @@ from db import categories_collection, ads_collection, app_configs_collection
 load_dotenv()
 
 DEFAULT_CONFIG = {
-    "categories": ["SPORT", "FOOD", "TECH"],
+    "categories": ["TV", "CAR", "GAME"],
     # Trigger types: CLICKS / INTERVAL
     # CLICKS: show after N clicks
     # INTERVAL: show every N seconds
