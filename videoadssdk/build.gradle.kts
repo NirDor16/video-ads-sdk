@@ -38,7 +38,6 @@ dependencies {
     implementation("androidx.media3:media3-exoplayer:1.4.1")
     implementation("androidx.media3:media3-ui:1.4.1")
     implementation("androidx.appcompat:appcompat:1.7.0")
-    implementation("com.google.android.ads:mediation-test-suite:3.0.0")
     implementation("androidx.lifecycle:lifecycle-process:2.10.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
 
