@@ -42,25 +42,20 @@ object AdsSdk {
     private lateinit var api: AdsApi
     private lateinit var appId: String
 
-    // server config (source of truth is server, but we keep local copy)
     @Volatile
     private var config: AppConfig = AppConfig()
 
-    // click trigger
     private var clickCounter = 0
 
-    // interval trigger
+    // INTERVAL
     private var lastAdShownAtMs = 0L
     private var intervalJob: Job? = null
 
-    // prevent multiple ads at once
     private val isShowing = AtomicBoolean(false)
-
-    // SDK scope
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     // app foreground tracking
-    private val isAppOpen = AtomicBoolean(true)
+    private val isAppOpen = AtomicBoolean(false)
 
     // ---- auto tracking ----
     private var lifecycleRegistered = false
@@ -70,6 +65,8 @@ object AdsSdk {
 
     /**
      * Call once at app start
+     * - auto hooks all activities
+     * - auto pulls config (with small retry)
      */
     fun init(context: Context, baseUrl: String, appId: String) {
         this.appId = appId.trim()
@@ -94,12 +91,15 @@ object AdsSdk {
         // ✅ Multi-screen apps: auto hook all Activities + all taps
         registerAutoTracking(context.applicationContext)
 
-        // ✅ Pull config once in background (so dev doesn't have to call refreshConfig)
+        // ✅ Pull config automatically (with a few retries)
         scope.launch {
-            try {
-                refreshConfig()
-            } catch (_: Exception) {
-                // ignore (optional: add retry if you want)
+            repeat(3) { attempt ->
+                try {
+                    refreshConfig()
+                    return@launch
+                } catch (_: Exception) {
+                    if (attempt < 2) delay(1200)
+                }
             }
         }
     }
@@ -124,18 +124,18 @@ object AdsSdk {
     }
 
     /**
-     * Count a click. Only relevant when trigger=CLICKS.
+     * Count a click (auto called by SDK touch hook when trigger=CLICKS)
      */
     fun registerClick() {
         if (!initialized) return
         if (!isAppOpen.get()) return
         if (!config.trigger.type.equals("CLICKS", ignoreCase = true)) return
-
         clickCounter++
     }
 
     /**
-     * Main entry point: decide whether to show ad now (CLICKS or INTERVAL).
+     * Decide whether to show ad now (CLICKS or INTERVAL).
+     * In INTERVAL mode, scheduler is the main engine; this remains as a safe fallback.
      */
     fun maybeShowAd(activityProvider: () -> Activity?) {
         if (!initialized) return
@@ -153,19 +153,8 @@ object AdsSdk {
             }
 
             "INTERVAL" -> {
-                // In INTERVAL mode, the scheduler handles timing.
-                // Still allow manual checks (e.g., on resume).
-                val seconds = (config.trigger.seconds ?: 120).coerceAtLeast(10)
-                val now = System.currentTimeMillis()
-                val elapsed = now - lastAdShownAtMs
-
-                if (lastAdShownAtMs == 0L || elapsed >= seconds * 1000L) {
-                    val act = activityProvider() ?: return
-                    scope.launch {
-                        requestAndShow(act)
-                        lastAdShownAtMs = System.currentTimeMillis()
-                    }
-                }
+                // fallback: do nothing (scheduler handles it),
+                // but we can still allow a manual check if needed.
             }
 
             else -> Unit
@@ -173,8 +162,8 @@ object AdsSdk {
     }
 
     /**
-     * Developer-controlled preferences:
-     * Updates server config (PUT) and refreshes local config from server.
+     * Developer-controlled preferences (optional).
+     * Note: dev can call this once; SDK will keep working automatically afterwards.
      */
     suspend fun setPreferences(
         categories: List<String>,
@@ -211,7 +200,6 @@ object AdsSdk {
         }
 
         val refreshed = refreshConfig()
-        // scheduler might need to start/stop after config change
         startOrStopIntervalScheduler()
         return refreshed
     }
@@ -279,10 +267,7 @@ object AdsSdk {
                     hookWindowCallback(activity)
                 }
 
-                // helpful on resume
-                maybeShowAd { activity }
-
-                // ✅ INTERVAL scheduler start
+                // when resuming, ensure interval scheduler state is correct
                 startOrStopIntervalScheduler()
             }
 
@@ -296,7 +281,6 @@ object AdsSdk {
                     unhookWindowCallback(activity)
                 }
 
-                // ✅ INTERVAL scheduler stop if background
                 startOrStopIntervalScheduler()
             }
 
@@ -338,9 +322,12 @@ object AdsSdk {
     ) : Window.Callback {
 
         override fun dispatchTouchEvent(event: MotionEvent): Boolean {
-            if (event.action == MotionEvent.ACTION_UP) {
-                // ✅ any tap counts as a click + may show ad
+            // never intercept inside ad screen (extra safety)
+            if (activity !is AdPlayerActivity && event.action == MotionEvent.ACTION_UP) {
+                // only in CLICKS mode will it actually increment
                 AdsSdk.registerClick()
+
+                // only in CLICKS mode will it potentially show
                 AdsSdk.maybeShowAd { activity }
             }
             return base.dispatchTouchEvent(event)
@@ -400,7 +387,7 @@ object AdsSdk {
 
                 val act = currentActivityRef?.get()
 
-                // if no activity or we're on ad screen, wait a bit and retry
+                // if no activity or we're on ad screen, retry
                 if (act == null || act is AdPlayerActivity) {
                     delay(500)
                     continue
@@ -409,7 +396,7 @@ object AdsSdk {
                 val seconds = (config.trigger.seconds ?: 120).coerceAtLeast(10)
                 val now = System.currentTimeMillis()
 
-                // first start: begin counting from now
+                // start counting from "now" if first run
                 if (lastAdShownAtMs == 0L) {
                     lastAdShownAtMs = now
                 }
