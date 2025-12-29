@@ -299,12 +299,20 @@ object AdsSdk {
     }
 
     private fun hookWindowCallback(activity: Activity) {
-        if (windowCallbacks.containsKey(activity)) return
         val window = activity.window ?: return
-        val original = window.callback ?: return
 
-        windowCallbacks[activity] = original
-        window.callback = TouchInterceptingCallback(original, activity)
+        // אם שמרנו בעבר original – נשתמש בו
+        val original = windowCallbacks[activity] ?: window.callback ?: return
+
+        // נשמור original פעם אחת בלבד
+        if (!windowCallbacks.containsKey(activity)) {
+            windowCallbacks[activity] = original
+        }
+
+        // אם כרגע לא מחובר intercept – נחבר מחדש
+        if (window.callback !is TouchInterceptingCallback) {
+            window.callback = TouchInterceptingCallback(original, activity)
+        }
     }
 
     private fun unhookWindowCallback(activity: Activity) {
@@ -314,7 +322,11 @@ object AdsSdk {
         if (window.callback is TouchInterceptingCallback) {
             window.callback = original
         }
+
+        // ✅ הכי חשוב: למחוק כדי שב־resume הבא יהיה hook מחדש
+        windowCallbacks.remove(activity)
     }
+
 
     private class TouchInterceptingCallback(
         private val base: Window.Callback,
