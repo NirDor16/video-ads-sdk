@@ -46,7 +46,7 @@ def normalize_config(data: dict) -> dict:
         x_delay = int(x_delay)
     except Exception:
         x_delay = 5
-    cfg["x_delay_seconds"] = max(0, x_delay)
+    cfg["x_delay_seconds"] = min(30, max(5, x_delay))
 
     return cfg
 
@@ -193,6 +193,7 @@ def create_app() -> Flask:
             "category_id": str(data["category_id"]).strip().upper(),
             "title": str(data["title"]).strip(),
             "video_url": str(data["video_url"]).strip(),
+            "target_url": str(data.get("target_url", "")).strip() or None,
             "status": str(data.get("status", "active")).strip().lower(),  # active / inactive
             "created_at": datetime.utcnow().isoformat() + "Z",
         }
@@ -227,7 +228,7 @@ def create_app() -> Flask:
         data = request.get_json(silent=True) or {}
         ad_id = ad_id.strip()
 
-        allowed = {"category_id", "title", "video_url", "status"}
+        allowed = {"category_id", "title", "video_url", "status","target_url"}
         update = {k: v for k, v in data.items() if k in allowed and v is not None}
 
         if "category_id" in update:
@@ -238,6 +239,8 @@ def create_app() -> Flask:
             update["video_url"] = str(update["video_url"]).strip()
         if "status" in update:
             update["status"] = str(update["status"]).strip().lower()
+        if "target_url" in update:
+            update["target_url"] = str(update["target_url"]).strip() or None
 
         if not update:
             return jsonify({

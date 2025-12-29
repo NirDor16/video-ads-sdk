@@ -22,6 +22,11 @@ categories.insert_many([
 
 now = datetime.utcnow().isoformat() + "Z"
 
+# Demo target URLs (you can change later per ad)
+TV_URL = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+CAR_URL = "https://www.youtube.com/watch?v=9bZkp7q19f0"
+GAME_URL = "https://www.youtube.com/watch?v=jfKfPfyJRdk"
+
 ads.insert_many([
     # -------- TV --------
     {
@@ -29,6 +34,7 @@ ads.insert_many([
         "category_id": "TV",
         "title": "TV Promo 1",
         "video_url": "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+        "target_url": TV_URL,
         "status": "active",
         "created_at": now
     },
@@ -37,6 +43,7 @@ ads.insert_many([
         "category_id": "TV",
         "title": "TV Promo 2",
         "video_url": "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4",
+        "target_url": TV_URL,
         "status": "active",
         "created_at": now
     },
@@ -45,6 +52,7 @@ ads.insert_many([
         "category_id": "TV",
         "title": "TV Promo 3",
         "video_url": "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
+        "target_url": TV_URL,
         "status": "active",
         "created_at": now
     },
@@ -55,6 +63,7 @@ ads.insert_many([
         "category_id": "CAR",
         "title": "Car Ad 1",
         "video_url": "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/WhatCarCanYouGetForAGrand.mp4",
+        "target_url": CAR_URL,
         "status": "active",
         "created_at": now
     },
@@ -63,10 +72,10 @@ ads.insert_many([
         "category_id": "CAR",
         "title": "Car Ad 2",
         "video_url": "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/WeAreGoingOnBullrun.mp4",
+        "target_url": CAR_URL,
         "status": "active",
         "created_at": now
     },
-    
 
     # -------- GAME --------
     {
@@ -74,6 +83,7 @@ ads.insert_many([
         "category_id": "GAME",
         "title": "Game Trailer 1",
         "video_url": "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+        "target_url": GAME_URL,
         "status": "active",
         "created_at": now
     },
@@ -82,6 +92,7 @@ ads.insert_many([
         "category_id": "GAME",
         "title": "Game Trailer 2",
         "video_url": "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
+        "target_url": GAME_URL,
         "status": "active",
         "created_at": now
     },
@@ -90,9 +101,10 @@ ads.insert_many([
         "category_id": "GAME",
         "title": "Game Trailer 3",
         "video_url": "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4",
+        "target_url": GAME_URL,
         "status": "active",
         "created_at": now
     },
 ])
 
-print("✅ Seed data inserted successfully: 9 ads (3 per category)")
+print("✅ Seed data inserted successfully: 8 ads (TV=3, CAR=2, GAME=3)")
