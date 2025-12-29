@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/root"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
@@ -8,7 +10,9 @@
         android:id="@+id/playerView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:keepScreenOn="true" />
+        android:keepScreenOn="true"
+        app:use_controller="false"
+        app:controller_auto_show="false" />
 
     <ImageButton
         android:id="@+id/btnClose"
@@ -19,4 +23,5 @@
         android:background="@android:color/transparent"
         android:contentDescription="Close"
         android:src="@android:drawable/ic_menu_close_clear_cancel" />
+
 </FrameLayout>

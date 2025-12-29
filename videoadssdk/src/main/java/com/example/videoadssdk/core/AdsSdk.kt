@@ -1,19 +1,41 @@
 package com.example.videoadssdk.core
 
 import android.app.Activity
+import android.app.Application
 import android.content.Context
+import android.os.Bundle
+import android.view.ActionMode
+import android.view.KeyEvent
+import android.view.Menu
+import android.view.MenuItem
+import android.view.MotionEvent
+import android.view.SearchEvent
+import android.view.View
+import android.view.Window
+import android.view.WindowManager
+import android.view.accessibility.AccessibilityEvent
 import com.example.videoadssdk.api.AdsApi
 import com.example.videoadssdk.model.Ad
 import com.example.videoadssdk.model.AppConfig
 import com.example.videoadssdk.model.Trigger
 import com.example.videoadssdk.model.UpdateConfigRequest
 import com.example.videoadssdk.player.AdPlayerActivity
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
-import java.util.concurrent.atomic.AtomicBoolean
-import okhttp3.OkHttpClient
+import java.lang.ref.WeakReference
+import java.util.WeakHashMap
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
+
 object AdsSdk {
 
     private var initialized = false
@@ -29,6 +51,7 @@ object AdsSdk {
 
     // interval trigger
     private var lastAdShownAtMs = 0L
+    private var intervalJob: Job? = null
 
     // prevent multiple ads at once
     private val isShowing = AtomicBoolean(false)
@@ -38,6 +61,12 @@ object AdsSdk {
 
     // app foreground tracking
     private val isAppOpen = AtomicBoolean(true)
+
+    // ---- auto tracking ----
+    private var lifecycleRegistered = false
+    private var resumedActivities = 0
+    private val windowCallbacks = WeakHashMap<Activity, Window.Callback>()
+    private var currentActivityRef: WeakReference<Activity>? = null
 
     /**
      * Call once at app start
@@ -61,10 +90,19 @@ object AdsSdk {
             .create(AdsApi::class.java)
 
         initialized = true
-    }
 
-    fun onAppForeground() { isAppOpen.set(true) }
-    fun onAppBackground() { isAppOpen.set(false) }
+        // ✅ Multi-screen apps: auto hook all Activities + all taps
+        registerAutoTracking(context.applicationContext)
+
+        // ✅ Pull config once in background (so dev doesn't have to call refreshConfig)
+        scope.launch {
+            try {
+                refreshConfig()
+            } catch (_: Exception) {
+                // ignore (optional: add retry if you want)
+            }
+        }
+    }
 
     /**
      * Fetch latest config from server
@@ -79,12 +117,14 @@ object AdsSdk {
         clickCounter = 0
         lastAdShownAtMs = 0L
 
+        // ✅ if INTERVAL is enabled while app is open, start scheduler
+        startOrStopIntervalScheduler()
+
         return config
     }
 
     /**
      * Count a click. Only relevant when trigger=CLICKS.
-     * NOTE: This does NOT show ad by itself - call maybeShowAd(activityProvider) too.
      */
     fun registerClick() {
         if (!initialized) return
@@ -96,7 +136,6 @@ object AdsSdk {
 
     /**
      * Main entry point: decide whether to show ad now (CLICKS or INTERVAL).
-     * Call this after registerClick(), and also optionally on screen changes.
      */
     fun maybeShowAd(activityProvider: () -> Activity?) {
         if (!initialized) return
@@ -114,6 +153,8 @@ object AdsSdk {
             }
 
             "INTERVAL" -> {
+                // In INTERVAL mode, the scheduler handles timing.
+                // Still allow manual checks (e.g., on resume).
                 val seconds = (config.trigger.seconds ?: 120).coerceAtLeast(10)
                 val now = System.currentTimeMillis()
                 val elapsed = now - lastAdShownAtMs
@@ -162,16 +203,17 @@ object AdsSdk {
         val newConfig = AppConfig(
             categories = if (cleanedCats.isEmpty()) config.categories else cleanedCats,
             trigger = newTrigger,
-            x_delay_seconds = (xDelaySeconds ?: config.x_delay_seconds).coerceAtLeast(0)
+            x_delay_seconds = (xDelaySeconds ?: config.x_delay_seconds).coerceIn(5, 30)
         )
 
-        // update server
         withContext(Dispatchers.IO) {
             api.updateConfig(appId, UpdateConfigRequest(newConfig))
         }
 
-        // refresh local from server (source of truth)
-        return refreshConfig()
+        val refreshed = refreshConfig()
+        // scheduler might need to start/stop after config change
+        startOrStopIntervalScheduler()
+        return refreshed
     }
 
     private suspend fun requestAd(): Ad? {
@@ -199,15 +241,193 @@ object AdsSdk {
             val ad = requestAd() ?: return
             showAd(activity, ad)
         } catch (_: Exception) {
-            // optional log
+            // ignore
         } finally {
             isShowing.set(false)
         }
     }
 
     fun showAd(activity: Activity, ad: Ad) {
-        val xDelay = config.x_delay_seconds.coerceAtLeast(5)
-        val intent = AdPlayerActivity.createIntent(activity, ad.video_url, xDelay)
+        val xDelay = config.x_delay_seconds.coerceIn(5, 30)
+        val intent = AdPlayerActivity.createIntent(
+            context = activity,
+            videoUrl = ad.video_url,
+            targetUrl = ad.target_url,
+            xDelaySeconds = xDelay
+        )
         activity.startActivity(intent)
+    }
+
+    // ---------------------------
+    // Auto tracking (all screens)
+    // ---------------------------
+    private fun registerAutoTracking(appContext: Context) {
+        if (lifecycleRegistered) return
+        val app = appContext as? Application ?: return
+
+        lifecycleRegistered = true
+
+        app.registerActivityLifecycleCallbacks(object : Application.ActivityLifecycleCallbacks {
+
+            override fun onActivityResumed(activity: Activity) {
+                resumedActivities++
+                isAppOpen.set(true)
+                currentActivityRef = WeakReference(activity)
+
+                // don't track clicks inside the ad screen itself
+                if (activity !is AdPlayerActivity) {
+                    hookWindowCallback(activity)
+                }
+
+                // helpful on resume
+                maybeShowAd { activity }
+
+                // ✅ INTERVAL scheduler start
+                startOrStopIntervalScheduler()
+            }
+
+            override fun onActivityPaused(activity: Activity) {
+                resumedActivities = (resumedActivities - 1).coerceAtLeast(0)
+                if (resumedActivities == 0) {
+                    isAppOpen.set(false)
+                }
+
+                if (activity !is AdPlayerActivity) {
+                    unhookWindowCallback(activity)
+                }
+
+                // ✅ INTERVAL scheduler stop if background
+                startOrStopIntervalScheduler()
+            }
+
+            override fun onActivityDestroyed(activity: Activity) {
+                if (activity !is AdPlayerActivity) {
+                    unhookWindowCallback(activity)
+                    windowCallbacks.remove(activity)
+                }
+            }
+
+            override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {}
+            override fun onActivityStarted(activity: Activity) {}
+            override fun onActivityStopped(activity: Activity) {}
+            override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {}
+        })
+    }
+
+    private fun hookWindowCallback(activity: Activity) {
+        if (windowCallbacks.containsKey(activity)) return
+        val window = activity.window ?: return
+        val original = window.callback ?: return
+
+        windowCallbacks[activity] = original
+        window.callback = TouchInterceptingCallback(original, activity)
+    }
+
+    private fun unhookWindowCallback(activity: Activity) {
+        val window = activity.window ?: return
+        val original = windowCallbacks[activity] ?: return
+
+        if (window.callback is TouchInterceptingCallback) {
+            window.callback = original
+        }
+    }
+
+    private class TouchInterceptingCallback(
+        private val base: Window.Callback,
+        private val activity: Activity
+    ) : Window.Callback {
+
+        override fun dispatchTouchEvent(event: MotionEvent): Boolean {
+            if (event.action == MotionEvent.ACTION_UP) {
+                // ✅ any tap counts as a click + may show ad
+                AdsSdk.registerClick()
+                AdsSdk.maybeShowAd { activity }
+            }
+            return base.dispatchTouchEvent(event)
+        }
+
+        override fun dispatchKeyEvent(event: KeyEvent): Boolean = base.dispatchKeyEvent(event)
+        override fun dispatchKeyShortcutEvent(event: KeyEvent): Boolean = base.dispatchKeyShortcutEvent(event)
+        override fun dispatchTrackballEvent(event: MotionEvent): Boolean = base.dispatchTrackballEvent(event)
+        override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean = base.dispatchGenericMotionEvent(event)
+        override fun dispatchPopulateAccessibilityEvent(event: AccessibilityEvent): Boolean =
+            base.dispatchPopulateAccessibilityEvent(event)
+
+        override fun onCreatePanelView(featureId: Int): View? = base.onCreatePanelView(featureId)
+        override fun onCreatePanelMenu(featureId: Int, menu: Menu): Boolean = base.onCreatePanelMenu(featureId, menu)
+        override fun onPreparePanel(featureId: Int, view: View?, menu: Menu): Boolean =
+            base.onPreparePanel(featureId, view, menu)
+        override fun onMenuOpened(featureId: Int, menu: Menu): Boolean = base.onMenuOpened(featureId, menu)
+        override fun onMenuItemSelected(featureId: Int, item: MenuItem): Boolean = base.onMenuItemSelected(featureId, item)
+        override fun onWindowAttributesChanged(attrs: WindowManager.LayoutParams) = base.onWindowAttributesChanged(attrs)
+        override fun onContentChanged() = base.onContentChanged()
+        override fun onWindowFocusChanged(hasFocus: Boolean) = base.onWindowFocusChanged(hasFocus)
+        override fun onAttachedToWindow() = base.onAttachedToWindow()
+        override fun onDetachedFromWindow() = base.onDetachedFromWindow()
+        override fun onPanelClosed(featureId: Int, menu: Menu) = base.onPanelClosed(featureId, menu)
+        override fun onSearchRequested(): Boolean = base.onSearchRequested()
+        override fun onSearchRequested(searchEvent: SearchEvent?): Boolean = base.onSearchRequested(searchEvent)
+        override fun onWindowStartingActionMode(callback: ActionMode.Callback): ActionMode? =
+            base.onWindowStartingActionMode(callback)
+        override fun onWindowStartingActionMode(callback: ActionMode.Callback, type: Int): ActionMode? =
+            base.onWindowStartingActionMode(callback, type)
+        override fun onActionModeStarted(mode: ActionMode) = base.onActionModeStarted(mode)
+        override fun onActionModeFinished(mode: ActionMode) = base.onActionModeFinished(mode)
+    }
+
+    // ---------------------------
+    // INTERVAL scheduler
+    // ---------------------------
+    private fun startOrStopIntervalScheduler() {
+        if (!initialized || !isAppOpen.get()) {
+            intervalJob?.cancel()
+            intervalJob = null
+            return
+        }
+
+        val isInterval = config.trigger.type.equals("INTERVAL", ignoreCase = true)
+        if (!isInterval) {
+            intervalJob?.cancel()
+            intervalJob = null
+            return
+        }
+
+        if (intervalJob?.isActive == true) return
+
+        intervalJob = scope.launch {
+            while (isActive && initialized && isAppOpen.get()
+                && config.trigger.type.equals("INTERVAL", ignoreCase = true)) {
+
+                val act = currentActivityRef?.get()
+
+                // if no activity or we're on ad screen, wait a bit and retry
+                if (act == null || act is AdPlayerActivity) {
+                    delay(500)
+                    continue
+                }
+
+                val seconds = (config.trigger.seconds ?: 120).coerceAtLeast(10)
+                val now = System.currentTimeMillis()
+
+                // first start: begin counting from now
+                if (lastAdShownAtMs == 0L) {
+                    lastAdShownAtMs = now
+                }
+
+                val nextAt = lastAdShownAtMs + seconds * 1000L
+                val waitMs = (nextAt - now).coerceAtLeast(0L)
+
+                delay(waitMs)
+
+                if (!isAppOpen.get()) continue
+                if (isShowing.get()) {
+                    delay(300)
+                    continue
+                }
+
+                requestAndShow(act)
+                lastAdShownAtMs = System.currentTimeMillis()
+            }
+        }
     }
 }

@@ -6,5 +6,6 @@ data class Ad(
     val title: String,
     val video_url: String,
     val status: String,
-    val created_at: String? = null // אופציונלי, לא שוברים תאימות
+    val created_at: String? = null,
+    val target_url: String? = null
 )
