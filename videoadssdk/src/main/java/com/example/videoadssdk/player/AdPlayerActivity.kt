@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.os.SystemClock
 import android.view.View
 import android.widget.ImageButton
 import androidx.appcompat.app.AppCompatActivity
@@ -19,6 +20,9 @@ class AdPlayerActivity : AppCompatActivity() {
     private var player: ExoPlayer? = null
     private var uiJob: Job? = null
 
+    // prevent spam clicks on the ad
+    private var lastClickAtMs: Long = 0L
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_ad_player)
@@ -30,28 +34,29 @@ class AdPlayerActivity : AppCompatActivity() {
         val playerView = findViewById<PlayerView>(R.id.playerView)
         val btnClose = findViewById<ImageButton>(R.id.btnClose)
 
+        // hide controls (clean ad screen)
         playerView.useController = false
 
+        // ensure X is above the player
+        btnClose.bringToFront()
 
         // X hidden first
         btnClose.visibility = View.INVISIBLE
         btnClose.isEnabled = false
 
-        // show X after delay (TARGET_URL step: leave as-is for now)
+        // show X after delay
         uiJob = CoroutineScope(Dispatchers.Main.immediate).launch {
-            delay(xDelaySeconds.coerceIn(5, 30) * 1000L)
-
+            delay(xDelaySeconds.coerceAtLeast(5) * 1000L)
             btnClose.visibility = View.VISIBLE
             btnClose.isEnabled = true
         }
 
-        // X closes the ad (and MUST NOT open target url)
+        // X closes the ad
         btnClose.setOnClickListener {
             setResult(Activity.RESULT_CANCELED)
             finish()
         }
-        // extra safety: don't let the click "fall through"
-        btnClose.setOnTouchListener { _, _ -> true }
+        // ❌ IMPORTANT: do NOT add onTouchListener that returns true (it breaks the click)
 
         if (videoUrl.isNullOrBlank()) {
             setResult(Activity.RESULT_CANCELED)
@@ -59,11 +64,15 @@ class AdPlayerActivity : AppCompatActivity() {
             return
         }
 
-        // Clicking the ad opens target url (if exists)
+        // Clicking the ad opens target url (if exists) AND closes the ad screen
         playerView.setOnClickListener {
+            val now = SystemClock.elapsedRealtime()
+            if (now - lastClickAtMs < 600) return@setOnClickListener // anti double-tap
+            lastClickAtMs = now
+
             val url = targetUrl?.trim().orEmpty()
             if (url.isNotEmpty()) {
-                openUrl(url)
+                openUrlAndClose(url)
             }
         }
 
@@ -75,14 +84,15 @@ class AdPlayerActivity : AppCompatActivity() {
         }
     }
 
-    private fun openUrl(url: String) {
+    private fun openUrlAndClose(url: String) {
         try {
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-            startActivity(intent)
+            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
         } catch (_: Exception) {
             // ignore
+        } finally {
+            // close the ad immediately so returning goes back to the app screen
+            setResult(Activity.RESULT_OK)
+            finish()
         }
     }
 
