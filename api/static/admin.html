@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>Ads Admin</title>
+  <title>Video Ads Admin</title>
   <style>
     body { font-family: Arial, sans-serif; padding: 20px; }
     h2, h3 { margin-top: 0; }
@@ -19,7 +19,7 @@
 </head>
 <body>
 
-<h2>🎬 Video Ads Admin</h2>
+<h2>🎬 Video Ads Admin (URL-based)</h2>
 
 <div class="card">
   <label><b>App ID:</b></label><br/>
@@ -29,12 +29,12 @@
 </div>
 
 <div class="card">
-  <h3>➕ Upload New Ad</h3>
+  <h3>➕ Add New Ad</h3>
 
   <div class="row">
     <div>
       <label>Category:</label><br/>
-      <select id="upCat">
+      <select id="category">
         <option value="TV">TV</option>
         <option value="CAR">CAR</option>
         <option value="GAME">GAME</option>
@@ -43,26 +43,26 @@
 
     <div>
       <label>Title:</label><br/>
-      <input id="upTitle" placeholder="Ad title"/>
+      <input id="title" placeholder="Ad title"/>
     </div>
 
     <div>
       <label>Ad ID (optional):</label><br/>
-      <input id="upAdId" placeholder="ad_custom_001"/>
+      <input id="adId" placeholder="ad_tv_004"/>
     </div>
 
-    <div>
+    <div style="min-width:300px">
+      <label>Video URL (mp4):</label><br/>
+      <input id="videoUrl" placeholder="https://example.com/video.mp4" style="width:100%"/>
+    </div>
+
+    <div style="min-width:260px">
       <label>Target URL (optional):</label><br/>
-      <input id="upTarget" placeholder="https://example.com"/>
+      <input id="targetUrl" placeholder="https://example.com" style="width:100%"/>
     </div>
 
     <div>
-      <label>Video file:</label><br/>
-      <input id="upFile" type="file" accept="video/*"/>
-    </div>
-
-    <div>
-      <button onclick="uploadVideo()">Upload</button>
+      <button onclick="addAd()">Add</button>
     </div>
   </div>
 </div>
@@ -99,12 +99,11 @@ async function refreshAds() {
 
   (j.ads || []).forEach(ad => {
     const tr = document.createElement("tr");
-
     tr.innerHTML = `
       <td>${ad.ad_id}</td>
       <td>${ad.category_id}</td>
       <td>${ad.title}</td>
-      <td>${ad.video_url ? `<a href="${ad.video_url}" target="_blank">open</a>` : ""}</td>
+      <td><a href="${ad.video_url}" target="_blank">open</a></td>
       <td>${ad.target_url ? `<a href="${ad.target_url}" target="_blank">open</a>` : ""}</td>
       <td><button onclick="deleteAd('${ad.ad_id}')">Delete</button></td>
     `;
@@ -114,23 +113,19 @@ async function refreshAds() {
   out(JSON.stringify(j, null, 2));
 }
 
-async function uploadVideo() {
-  const file = document.getElementById("upFile").files[0];
-  if (!file) {
-    alert("Choose a video file");
-    return;
-  }
+async function addAd() {
+  const payload = {
+    ad_id: document.getElementById("adId").value,
+    category_id: document.getElementById("category").value,
+    title: document.getElementById("title").value,
+    video_url: document.getElementById("videoUrl").value,
+    target_url: document.getElementById("targetUrl").value
+  };
 
-  const fd = new FormData();
-  fd.append("file", file);
-  fd.append("category_id", document.getElementById("upCat").value);
-  fd.append("title", document.getElementById("upTitle").value);
-  fd.append("ad_id", document.getElementById("upAdId").value);
-  fd.append("target_url", document.getElementById("upTarget").value);
-
-  const r = await fetch(`/v1/apps/${encodeURIComponent(appId())}/ads/upload`, {
+  const r = await fetch(`/v1/apps/${encodeURIComponent(appId())}/ads`, {
     method: "POST",
-    body: fd
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
   });
 
   const j = await r.json();
