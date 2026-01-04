@@ -10,9 +10,12 @@ db = client["video_ads"]
 
 categories = db["categories"]
 ads = db["ads"]
+app_configs = db["app_configs"]
 
+# clean
 categories.delete_many({})
 ads.delete_many({})
+app_configs.delete_many({})
 
 categories.insert_many([
     {"id": "TV",   "display_name": "TV",   "description": "TV-related video ads"},
@@ -22,14 +25,16 @@ categories.insert_many([
 
 now = datetime.utcnow().isoformat() + "Z"
 
-# Demo target URLs (you can change later per ad)
 TV_URL = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
 CAR_URL = "https://www.youtube.com/watch?v=9bZkp7q19f0"
 GAME_URL = "https://www.youtube.com/watch?v=jfKfPfyJRdk"
 
+APP_ID = "demo_app"
+
 ads.insert_many([
     # -------- TV --------
     {
+        "app_id": APP_ID,
         "ad_id": "ad_tv_001",
         "category_id": "TV",
         "title": "TV Promo 1",
@@ -39,6 +44,7 @@ ads.insert_many([
         "created_at": now
     },
     {
+        "app_id": APP_ID,
         "ad_id": "ad_tv_002",
         "category_id": "TV",
         "title": "TV Promo 2",
@@ -48,6 +54,7 @@ ads.insert_many([
         "created_at": now
     },
     {
+        "app_id": APP_ID,
         "ad_id": "ad_tv_003",
         "category_id": "TV",
         "title": "TV Promo 3",
@@ -59,6 +66,7 @@ ads.insert_many([
 
     # -------- CAR --------
     {
+        "app_id": APP_ID,
         "ad_id": "ad_car_001",
         "category_id": "CAR",
         "title": "Car Ad 1",
@@ -68,6 +76,7 @@ ads.insert_many([
         "created_at": now
     },
     {
+        "app_id": APP_ID,
         "ad_id": "ad_car_002",
         "category_id": "CAR",
         "title": "Car Ad 2",
@@ -79,6 +88,7 @@ ads.insert_many([
 
     # -------- GAME --------
     {
+        "app_id": APP_ID,
         "ad_id": "ad_game_001",
         "category_id": "GAME",
         "title": "Game Trailer 1",
@@ -88,6 +98,7 @@ ads.insert_many([
         "created_at": now
     },
     {
+        "app_id": APP_ID,
         "ad_id": "ad_game_002",
         "category_id": "GAME",
         "title": "Game Trailer 2",
@@ -97,6 +108,7 @@ ads.insert_many([
         "created_at": now
     },
     {
+        "app_id": APP_ID,
         "ad_id": "ad_game_003",
         "category_id": "GAME",
         "title": "Game Trailer 3",
@@ -107,4 +119,3 @@ ads.insert_many([
     },
 ])
 
-print("✅ Seed data inserted successfully: 8 ads (TV=3, CAR=2, GAME=3)")

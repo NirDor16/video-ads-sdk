@@ -3,35 +3,122 @@
 <head>
   <meta charset="utf-8" />
   <title>Video Ads SDK Admin</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 16px; }
+    input, select, button { margin: 4px 0; padding: 6px; }
+    table { border-collapse: collapse; width: 100%; margin-top: 10px; }
+    th, td { border: 1px solid #ddd; padding: 8px; font-size: 14px; }
+    th { background: #f3f3f3; text-align: left; }
+    .row { display:flex; gap:12px; flex-wrap: wrap; align-items:flex-end; }
+    .card { border: 1px solid #ddd; padding: 12px; border-radius: 8px; margin-top: 12px; }
+    .danger { background:#ffecec; border:1px solid #ffb3b3; }
+    .small { font-size:12px; color:#666; }
+    pre { background:#111; color:#0f0; padding:12px; border-radius:8px; overflow:auto; }
+  </style>
 </head>
 <body>
   <h2>SDK Admin</h2>
 
-  <label>App ID:</label>
-  <input id="appId" value="demo_app" />
-  <button onclick="loadCfg()">Load</button>
+  <div class="card">
+    <div class="row">
+      <div>
+        <label><b>App ID:</b></label><br/>
+        <input id="appId" value="demo_app" />
+        <div class="small">כל הניהול כאן הוא לפי app_id</div>
+      </div>
 
-  <h3>Categories</h3>
-  <label><input type="checkbox" class="cat" value="TV"> TV</label><br/>
-  <label><input type="checkbox" class="cat" value="CAR"> CAR</label><br/>
-  <label><input type="checkbox" class="cat" value="GAME"> GAME</label><br/>
+      <div>
+        <button onclick="loadCfg()">Load Config</button>
+        <button onclick="saveCfg()">Save Config</button>
+      </div>
 
+      <div>
+        <button onclick="refreshAds()">Refresh Ads</button>
+      </div>
+    </div>
+  </div>
 
-  <h3>Trigger</h3>
-  <label><input type="radio" name="trg" value="CLICKS" checked> After 15 clicks</label><br/>
-  <label><input type="radio" name="trg" value="INTERVAL"> Every 2 minutes</label><br/>
+  <div class="card">
+    <h3>Categories</h3>
+    <label><input type="checkbox" class="cat" value="TV"> TV</label><br/>
+    <label><input type="checkbox" class="cat" value="CAR"> CAR</label><br/>
+    <label><input type="checkbox" class="cat" value="GAME"> GAME</label><br/>
 
-  <h3>Close (X) delay</h3>
-  <label>Show X after (seconds):</label>
-  <input id="xDelay" type="number" value="5" min="0"/>
+    <h3>Trigger</h3>
+    <label><input type="radio" name="trg" value="CLICKS" checked> After 15 clicks</label><br/>
+    <label><input type="radio" name="trg" value="INTERVAL"> Every 2 minutes</label><br/>
 
-  <br/><br/>
-  <button onclick="saveCfg()">Save</button>
+    <h3>Close (X) delay</h3>
+    <label>Show X after (seconds):</label><br/>
+    <input id="xDelay" type="number" value="5" min="0"/>
+  </div>
+
+  <div class="card">
+    <h3>Upload Custom Video (creates new Ad for this app)</h3>
+    <div class="row">
+      <div>
+        <label>Category:</label><br/>
+        <select id="upCat">
+          <option value="TV">TV</option>
+          <option value="CAR">CAR</option>
+          <option value="GAME">GAME</option>
+        </select>
+      </div>
+
+      <div style="min-width:260px">
+        <label>Title:</label><br/>
+        <input id="upTitle" placeholder="My custom ad" style="width:100%"/>
+      </div>
+
+      <div style="min-width:260px">
+        <label>Target URL (optional):</label><br/>
+        <input id="upTarget" placeholder="https://example.com" style="width:100%"/>
+      </div>
+
+      <div style="min-width:220px">
+        <label>Ad ID (optional):</label><br/>
+        <input id="upAdId" placeholder="ad_my_001" style="width:100%"/>
+      </div>
+
+      <div>
+        <label>Video File:</label><br/>
+        <input id="upFile" type="file" accept="video/mp4,video/webm,video/mov,video/m4v"/>
+      </div>
+
+      <div>
+        <button onclick="uploadVideo()">Upload</button>
+      </div>
+    </div>
+    <div class="small">הוידאו נשמר בשרת ומוגש דרך /media/...</div>
+  </div>
+
+  <div class="card danger">
+    <h3>Ads List (this app)</h3>
+    <div class="small">Delete מוחק גם את הקובץ אם זו מודעה שהועלתה דרך Upload.</div>
+    <table>
+      <thead>
+        <tr>
+          <th>ad_id</th>
+          <th>category</th>
+          <th>title</th>
+          <th>status</th>
+          <th>video_url</th>
+          <th>target_url</th>
+          <th>actions</th>
+        </tr>
+      </thead>
+      <tbody id="adsBody"></tbody>
+    </table>
+  </div>
 
   <pre id="out"></pre>
 
 <script>
 const out = (t)=> document.getElementById('out').textContent = t;
+
+function getAppId(){
+  return document.getElementById('appId').value.trim();
+}
 
 function selectedCats(){
   return [...document.querySelectorAll('.cat:checked')].map(x=>x.value);
@@ -48,7 +135,7 @@ function triggerType(){
 }
 
 async function loadCfg(){
-  const appId = document.getElementById('appId').value.trim();
+  const appId = getAppId();
   const r = await fetch(`/v1/apps/${encodeURIComponent(appId)}/config`);
   const j = await r.json();
   const cfg = j.config;
@@ -63,7 +150,7 @@ async function loadCfg(){
 }
 
 async function saveCfg(){
-  const appId = document.getElementById('appId').value.trim();
+  const appId = getAppId();
   const t = triggerType();
   const cfg = {
     categories: selectedCats(),
@@ -80,6 +167,85 @@ async function saveCfg(){
   });
   const j = await r.json();
   out(JSON.stringify(j, null, 2));
+}
+
+async function refreshAds(){
+  const appId = getAppId();
+  const r = await fetch(`/v1/apps/${encodeURIComponent(appId)}/ads`);
+  const j = await r.json();
+
+  const body = document.getElementById('adsBody');
+  body.innerHTML = "";
+
+  (j.ads || []).forEach(ad=>{
+    const tr = document.createElement('tr');
+
+    const td = (txt)=> {
+      const x = document.createElement('td');
+      x.textContent = txt ?? "";
+      return x;
+    };
+
+    tr.appendChild(td(ad.ad_id));
+    tr.appendChild(td(ad.category_id));
+    tr.appendChild(td(ad.title));
+    tr.appendChild(td(ad.status));
+
+    const v = document.createElement('td');
+    v.innerHTML = ad.video_url ? `<a href="${ad.video_url}" target="_blank">open</a>` : "";
+    tr.appendChild(v);
+
+    const t = document.createElement('td');
+    t.innerHTML = ad.target_url ? `<a href="${ad.target_url}" target="_blank">open</a>` : "";
+    tr.appendChild(t);
+
+    const actions = document.createElement('td');
+    actions.innerHTML = `
+      <button onclick="deleteAd('${ad.ad_id}')">Delete</button>
+    `;
+    tr.appendChild(actions);
+
+    body.appendChild(tr);
+  });
+
+  out(JSON.stringify(j, null, 2));
+}
+
+async function uploadVideo(){
+  const appId = getAppId();
+  const file = document.getElementById('upFile').files[0];
+  if(!file){ out("Pick a video file first"); return; }
+
+  const fd = new FormData();
+  fd.append("file", file);
+  fd.append("category_id", document.getElementById('upCat').value);
+  fd.append("title", document.getElementById('upTitle').value);
+  fd.append("target_url", document.getElementById('upTarget').value);
+  fd.append("ad_id", document.getElementById('upAdId').value);
+
+  const r = await fetch(`/v1/apps/${encodeURIComponent(appId)}/ads/upload`, {
+    method:"POST",
+    body: fd
+  });
+
+  const j = await r.json();
+  out(JSON.stringify(j, null, 2));
+
+  // refresh table
+  await refreshAds();
+}
+
+async function deleteAd(adId){
+  const appId = getAppId();
+  if(!confirm(`Delete ad ${adId} from app ${appId}?`)) return;
+
+  const r = await fetch(`/v1/apps/${encodeURIComponent(appId)}/ads/${encodeURIComponent(adId)}`, {
+    method:"DELETE"
+  });
+  const j = await r.json();
+  out(JSON.stringify(j, null, 2));
+
+  await refreshAds();
 }
 </script>
 </body>
