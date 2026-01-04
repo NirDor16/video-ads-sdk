@@ -1,0 +1,86 @@
+<h2>Multi-Screen Applications</h2>
+
+<p>
+  The SDK fully supports applications with multiple screens (multiple
+  <code>Activity</code> instances).
+</p>
+
+<p>
+  <b>You only need to initialize the SDK once.</b>
+  No additional integration is required in other screens.
+</p>
+
+<hr/>
+
+<h3>Where to Initialize the SDK</h3>
+
+<p>
+  Call <code>AdsSdk.init()</code> a single time during app startup.
+  The recommended locations are:
+</p>
+
+<ul style="color:var(--muted); line-height:1.7; margin:0;">
+  <li><b>Preferred:</b> <code>Application.onCreate()</code></li>
+  <li><b>Alternative:</b> <code>MainActivity.onCreate()</code></li>
+</ul>
+
+<pre><code>AdsSdk.init(
+  context = applicationContext,
+  baseUrl = "https://video-ads-sdk.onrender.com/",
+  appId = "demo_app"
+)</code></pre>
+
+<hr/>
+
+<h3>How It Works</h3>
+
+<p>
+  After initialization, the SDK automatically:
+</p>
+
+<ul style="color:var(--muted); line-height:1.7; margin:0;">
+  <li>Tracks all <code>Activity</code> lifecycle events globally</li>
+  <li>Monitors user interactions (clicks) across all screens</li>
+  <li>Detects the currently active screen</li>
+  <li>Displays ads on the active screen when a trigger condition is met</li>
+</ul>
+
+<p class="small">
+  This is implemented internally using
+  <code>Application.ActivityLifecycleCallbacks</code> and window-level
+  touch interception.
+</p>
+
+<hr/>
+
+<h3>Behavior Across Screens</h3>
+
+<p>
+  User interactions are counted continuously across screens.
+  The click counter is <b>not reset</b> when navigating between activities.
+</p>
+
+<p>
+  When an ad is triggered:
+</p>
+
+<ul style="color:var(--muted); line-height:1.7; margin:0;">
+  <li>The ad is displayed on the currently visible screen</li>
+  <li>The previous screen state is preserved</li>
+  <li>After closing the ad, the user returns to the same screen</li>
+</ul>
+
+<hr/>
+
+<h3>Important Notes</h3>
+
+<ul style="color:var(--muted); line-height:1.7; margin:0;">
+  <li>No SDK code is required in secondary activities</li>
+  <li>The SDK automatically ignores the ad player screen itself</li>
+  <li>Only one ad can be displayed at a time</li>
+</ul>
+
+<p class="small">
+  In summary: multi-screen support is fully automatic and requires
+  no additional developer effort beyond a single initialization call.
+</p>

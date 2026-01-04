@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>API - Video Ads SDK</title>
+  <link rel="stylesheet" href="assets/style.css" />
+</head>
+<body>
+  <div class="container">
+    <nav class="nav">
+      <a href="index.html">Home</a>
+      <a href="architecture.html">Architecture</a>
+      <a class="active" href="api.html">API</a>
+      <a href="android-sdk.html">Android SDK</a>
+      <a href="example-app.html">Example App</a>
+      <a href="admin-portal.html">Admin Portal</a>
+    </nav>
+
+    <div class="card">
+      <h1>API Reference</h1>
+      <p>Base URL: <code>https://video-ads-sdk.onrender.com</code></p>
+
+      <h2>Health</h2>
+      <p><b>GET</b> <code>/health</code></p>
+<pre><code>{
+  "status": "ok"
+}</code></pre>
+
+      <hr/>
+
+      <h2>Serve Ad</h2>
+      <p><b>GET</b> <code>/v1/serve</code></p>
+
+      <table class="table">
+        <tr><th>Query</th><th>Type</th><th>Description</th></tr>
+        <tr><td>app_id</td><td>string</td><td>Application identifier (required)</td></tr>
+        <tr><td>categories</td><td>string</td><td>Comma-separated categories (optional)</td></tr>
+        <tr><td>mode</td><td>string</td><td>RANDOM / MANUAL (optional, default RANDOM)</td></tr>
+        <tr><td>ad_id</td><td>string</td><td>Required only for MANUAL</td></tr>
+      </table>
+
+      <p class="small">Example:</p>
+<pre><code>GET /v1/serve?app_id=demo_app&categories=TV,CAR,GAME&mode=RANDOM</code></pre>
+
+      <p class="small">Response:</p>
+<pre><code>{
+  "ad": {
+    "app_id": "demo_app",
+    "ad_id": "ad_tv_001",
+    "category_id": "TV",
+    "title": "TV Promo 1",
+    "video_url": "https://example.com/video.mp4",
+    "target_url": "https://example.com",
+    "status": "active",
+    "created_at": "2026-01-01T12:00:00Z"
+  },
+  "mode": "RANDOM"
+}</code></pre>
+
+      <hr/>
+
+      <h2>Ads CRUD (Per App)</h2>
+
+      <h3>List Ads</h3>
+      <p><b>GET</b> <code>/v1/apps/&lt;app_id&gt;/ads</code></p>
+
+      <h3>Create Ad</h3>
+      <p><b>POST</b> <code>/v1/apps/&lt;app_id&gt;/ads</code></p>
+      <p class="small">Body (JSON):</p>
+<pre><code>{
+  "ad_id": "ad_custom_001",
+  "category_id": "TV",
+  "title": "My Ad",
+  "video_url": "https://example.com/myvideo.mp4",
+  "target_url": "https://example.com"
+}</code></pre>
+      <p class="small">Notes: <code>ad_id</code> is optional; if omitted, the server generates one.</p>
+
+      <h3>Delete Ad</h3>
+      <p><b>DELETE</b> <code>/v1/apps/&lt;app_id&gt;/ads/&lt;ad_id&gt;</code></p>
+
+      <hr/>
+
+      <h2>App Config (Used by SDK)</h2>
+      <p>
+        The SDK can fetch and update configuration per <code>app_id</code>.
+        This controls trigger type (CLICKS / INTERVAL), categories, and X delay.
+      </p>
+
+      <p><b>GET</b> <code>/v1/apps/&lt;app_id&gt;/config</code></p>
+      <p><b>PUT</b> <code>/v1/apps/&lt;app_id&gt;/config</code></p>
+
+      <p class="small">Config shape:</p>
+<pre><code>{
+  "categories": ["TV", "CAR", "GAME"],
+  "trigger": { "type": "CLICKS", "count": 15 },
+  "x_delay_seconds": 5
+}</code></pre>
+    </div>
+
+    <div class="footer">© Video Ads SDK Documentation</div>
+  </div>
+</body>
+</html>

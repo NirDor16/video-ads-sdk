@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Architecture - Video Ads SDK</title>
+  <link rel="stylesheet" href="assets/style.css" />
+</head>
+<body>
+  <div class="container">
+    <nav class="nav">
+      <a href="index.html">Home</a>
+      <a class="active" href="architecture.html">Architecture</a>
+      <a href="api.html">API</a>
+      <a href="android-sdk.html">Android SDK</a>
+      <a href="example-app.html">Example App</a>
+      <a href="admin-portal.html">Admin Portal</a>
+    </nav>
+
+    <div class="card">
+      <h1>Architecture</h1>
+      <p>
+        The system is split into four main components: Admin Portal, REST API service,
+        MongoDB Atlas, and the Android SDK (used by the example app and external developers).
+      </p>
+
+<pre><code>+-------------------+
+| Admin Web Portal  |
+| (Browser)         |
++---------+---------+
+          |
+          v
++-------------------+        +-------------------+
+| REST API Service  | <----> | MongoDB Atlas     |
+| (Flask, Render)   |        | (Cloud Database)  |
++---------+---------+        +-------------------+
+          ^
+          |
++---------+---------+
+| Android SDK       |
+| (Kotlin Library)  |
++---------+---------+
+          ^
+          |
++---------+---------+
+| Example Android   |
+| Application       |
++-------------------+</code></pre>
+
+      <hr/>
+
+      <h2>High-Level Flow</h2>
+      <p>
+        1) SDK initializes with <code>appId</code> and base URL. <br/>
+        2) SDK tracks clicks or triggers by interval (based on remote configuration). <br/>
+        3) When triggered, SDK calls <code>GET /v1/serve</code>. <br/>
+        4) API selects a random active ad matching app + categories and returns it. <br/>
+        5) SDK plays the video and optionally opens <code>target_url</code> on click.
+      </p>
+
+      <h2>Key Design Decisions</h2>
+      <ul style="color:var(--muted); line-height:1.7; margin:0;">
+        <li><b>App Isolation:</b> ads are scoped by <code>app_id</code>.</li>
+        <li><b>URL-based Ads:</b> <code>video_url</code> points to an MP4 source.</li>
+        <li><b>Stateless Selection:</b> selection is random; repeats may occur with small inventory.</li>
+        <li><b>Remote Config:</b> triggers can be configured per app.</li>
+      </ul>
+    </div>
+
+    <div class="footer">© Video Ads SDK Documentation</div>
+  </div>
+</body>
+</html>

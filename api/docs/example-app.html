@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Example App - Video Ads SDK</title>
+  <link rel="stylesheet" href="assets/style.css" />
+</head>
+<body>
+  <div class="container">
+    <nav class="nav">
+      <a href="index.html">Home</a>
+      <a href="architecture.html">Architecture</a>
+      <a href="api.html">API</a>
+      <a href="android-sdk.html">Android SDK</a>
+      <a class="active" href="example-app.html">Example App</a>
+      <a href="admin-portal.html">Admin Portal</a>
+    </nav>
+
+    <div class="card">
+      <h1>Example Android Application</h1>
+      <p>
+        The repository includes an example Android app demonstrating SDK initialization,
+        configuration, and ad playback behavior.
+      </p>
+
+      <h2>Run Locally</h2>
+      <ol style="color:var(--muted); line-height:1.7; margin:0;">
+        <li>Open the example app in Android Studio.</li>
+        <li>Ensure internet access is enabled (device/emulator).</li>
+        <li>Initialize the SDK with the Render URL.</li>
+        <li>Trigger ads using clicks or interval mode.</li>
+      </ol>
+
+      <h2>Sample Integration</h2>
+<pre><code>AdsSdk.init(
+  context = applicationContext,
+  baseUrl = "https://video-ads-sdk.onrender.com/",
+  appId = "demo_app"
+)</code></pre>
+
+      <h2>Screenshots</h2>
+      <p class="small">Place images under <code>docs/assets/screenshots/</code> and update names if needed.</p>
+      <img class="shot" src="assets/screenshots/example-app.png" alt="Example App Screenshot" />
+      <img class="shot" src="assets/screenshots/ad-player.png" alt="Ad Player Screenshot" />
+    </div>
+
+    <div class="footer">© Video Ads SDK Documentation</div>
+  </div>
+</body>
+</html>
