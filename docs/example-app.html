@@ -1,51 +1,73 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Example App - Video Ads SDK</title>
-  <link rel="stylesheet" href="assets/style.css" />
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Example App — Video Ads SDK</title>
+  <link rel="stylesheet" href="assets/style.css"/>
 </head>
 <body>
-  <div class="container">
-    <nav class="nav">
-      <a href="index.html">Home</a>
-      <a href="architecture.html">Architecture</a>
-      <a href="api.html">API</a>
-      <a href="android-sdk.html">Android SDK</a>
-      <a class="active" href="example-app.html">Example App</a>
-      <a href="admin-portal.html">Admin Portal</a>
-    </nav>
-
-    <div class="card">
-      <h1>Example Android Application</h1>
-      <p>
-        The repository includes an example Android app demonstrating SDK initialization,
-        configuration, and ad playback behavior.
-      </p>
-
-      <h2>Run Locally</h2>
-      <ol style="color:var(--muted); line-height:1.7; margin:0;">
-        <li>Open the example app in Android Studio.</li>
-        <li>Ensure internet access is enabled (device/emulator).</li>
-        <li>Initialize the SDK with the Render URL.</li>
-        <li>Trigger ads using clicks or interval mode.</li>
-      </ol>
-
-      <h2>Sample Integration</h2>
-<pre><code>AdsSdk.init(
-  context = applicationContext,
-  baseUrl = "https://video-ads-sdk.onrender.com/",
-  appId = "demo_app"
-)</code></pre>
-
-      <h2>Screenshots</h2>
-      <p class="small">Place images under <code>docs/assets/screenshots/</code> and update names if needed.</p>
-      <img class="shot" src="assets/screenshots/example-app.png" alt="Example App Screenshot" />
-      <img class="shot" src="assets/screenshots/ad-player.png" alt="Ad Player Screenshot" />
+  <nav class="nav">
+    <div class="container nav-inner">
+      <a class="brand" href="index.html">🎬 Video Ads SDK</a>
+      <div class="links">
+        <a href="android-sdk.html">Android SDK</a>
+        <a href="api.html">API</a>
+        <a href="admin-portal.html">Admin</a>
+        <a class="active" href="example-app.html">Example</a>
+        <a href="architecture.html">Architecture</a>
+      </div>
     </div>
+  </nav>
 
-    <div class="footer">© Video Ads SDK Documentation</div>
-  </div>
+  <main class="container page">
+    <h1>Example Android App</h1>
+    <p>
+      The example app demonstrates how to integrate the SDK and verify that ads appear on user interaction
+      (click-based) or time interval (interval-based).
+    </p>
+
+    <section class="box">
+      <h2>Integration steps</h2>
+      <ol>
+        <li>Add the SDK dependency (JitPack).</li>
+        <li>Call <code>AdsSdk.init(...)</code> once at app startup.</li>
+        <li>Optionally call <code>setPreferences()</code> to override trigger & categories.</li>
+      </ol>
+    </section>
+
+    <section class="box">
+      <h2>Recommended setup (MainActivity)</h2>
+      <pre><code class="code">
+AdsSdk.init(
+    context = applicationContext,
+    baseUrl = "https://video-ads-sdk.onrender.com/",
+    appId = "demo_app"
+)
+
+lifecycleScope.launch {
+    AdsSdk.setPreferences(
+        categories = listOf("TV", "CAR", "GAME"),
+        triggerType = "CLICKS",
+        clicksCount = 5,
+        xDelaySeconds = 5
+    )
+}
+      </code></pre>
+    </section>
+
+    <section class="box">
+      <h2>What to expect</h2>
+      <ul>
+        <li>After enough clicks (CLICKS mode), a full-screen video ad appears.</li>
+        <li>The close (X) button appears after the configured delay.</li>
+        <li>If <code>target_url</code> exists, clicking can redirect; otherwise no action.</li>
+      </ul>
+    </section>
+
+    <div class="back">
+      <a href="index.html">← Back to home</a>
+    </div>
+  </main>
 </body>
 </html>

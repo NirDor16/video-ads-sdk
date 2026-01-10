@@ -1,96 +1,56 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Video Ads SDK - Docs</title>
-  <link rel="stylesheet" href="assets/style.css" />
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Video Ads SDK — Documentation</title>
+  <link rel="stylesheet" href="assets/style.css"/>
 </head>
 <body>
-  <div class="container">
-    <nav class="nav">
-      <a class="active" href="index.html">Home</a>
-      <a href="architecture.html">Architecture</a>
-      <a href="api.html">API</a>
-      <a href="android-sdk.html">Android SDK</a>
-      <a href="example-app.html">Example App</a>
-      <a href="admin-portal.html">Admin Portal</a>
-    </nav>
-
-    <header class="hero">
-      <span class="badge">Video Ads SDK • Documentation</span>
-      <h1 style="margin-top:10px;">Video Ads SDK</h1>
-      <p>
-        A complete video advertising platform: cloud REST API, Kotlin Android SDK (published via JitPack),
-        an example Android app, and a web admin portal for managing video ads per <code>app_id</code>.
+  <header class="top">
+    <div class="container">
+      <h1>🎬 Video Ads SDK</h1>
+      <p class="subtitle">
+        A complete video advertising platform: REST API + Android SDK + Example App + Admin Portal.
       </p>
-
-      <div class="kv" style="margin-top:10px;">
-        <div><b>Live API</b><br><span class="small">https://video-ads-sdk.onrender.com</span></div>
-        <div><b>Admin</b><br><span class="small">/admin</span></div>
-        <div><b>SDK</b><br><span class="small">JitPack • NirDor16 • 0.3.0</span></div>
+      <div class="pill-row">
+        <span class="pill">Version: 0.3.0</span>
+        <span class="pill">JitPack: com.github.NirDor16:video-ads-sdk:0.3.0</span>
       </div>
-    </header>
+    </div>
+  </header>
 
-    <section class="grid">
-      <div class="card half">
-        <h2>Quick Start</h2>
-        <p>Integrate the SDK, initialize it once, and optionally configure the trigger mode.</p>
-<pre><code>repositories {
-  maven { url "https://jitpack.io" }
-}
+  <main class="container grid">
+    <a class="card" href="android-sdk.html">
+      <h2>Android SDK</h2>
+      <p>Setup, init, preferences, multi-screen behavior, and usage examples.</p>
+    </a>
 
-dependencies {
-  implementation "com.github.NirDor16:video-ads-sdk:0.3.0"
-}</code></pre>
+    <a class="card" href="api.html">
+      <h2>Backend API</h2>
+      <p>REST endpoints, request/response, and testing with curl.</p>
+    </a>
 
-<pre><code>AdsSdk.init(
-  context = applicationContext,
-  baseUrl = "https://video-ads-sdk.onrender.com/",
-  appId = "demo_app"
-)</code></pre>
-      </div>
+    <a class="card" href="admin-portal.html">
+      <h2>Admin Portal</h2>
+      <p>Manage ads per app (app_id): list, create, delete.</p>
+    </a>
 
-      <div class="card half">
-        <h2>What’s Included</h2>
-        <ul style="margin:0; color:var(--muted); line-height:1.7;">
-          <li><b>API Service</b> (Flask + MongoDB Atlas) – ad CRUD + ad serving</li>
-          <li><b>Android SDK</b> (Kotlin) – automatic click/time triggers + video player</li>
-          <li><b>Admin Portal</b> – manage ads using URL-based MP4 video sources</li>
-          <li><b>Example App</b> – demonstrates SDK usage and ad playback</li>
-        </ul>
-        <hr/>
-        <p class="small">
-          Tip: Start with <a href="architecture.html">Architecture</a> to understand the flow, then use
-          <a href="android-sdk.html">Android SDK</a> and <a href="api.html">API</a> as references.
-        </p>
-      </div>
+    <a class="card" href="example-app.html">
+      <h2>Example App</h2>
+      <p>How the sample Android app integrates the SDK and shows ads.</p>
+    </a>
 
-      <div class="card third">
-        <h3>Docs Sections</h3>
-        <p><a href="architecture.html">Architecture</a></p>
-        <p><a href="api.html">API Reference</a></p>
-        <p><a href="android-sdk.html">Android SDK Guide</a></p>
-        <p><a href="example-app.html">Example App Setup</a></p>
-        <p><a href="admin-portal.html">Admin Portal</a></p>
-      </div>
+    <a class="card" href="architecture.html">
+      <h2>Architecture</h2>
+      <p>How everything connects: SDK ↔ API ↔ MongoDB ↔ Admin.</p>
+    </a>
+  </main>
 
-      <div class="card third">
-        <h3>Render Deployment</h3>
-        <p class="small"><b>Env var:</b> <code>MONGO_URI</code></p>
-        <p class="small"><b>Health:</b> <code>/health</code></p>
-        <p class="small">Push to GitHub → Render deploys → verify health.</p>
-      </div>
-
-      <div class="card third">
-        <h3>Notes</h3>
-        <p class="small">• Ads are URL-based MP4 files.</p>
-        <p class="small">• Target URL is optional (open on click).</p>
-        <p class="small">• Repeats can happen when inventory is small.</p>
-      </div>
-    </section>
-
-    <div class="footer">© Video Ads SDK Documentation</div>
-  </div>
+  <footer class="container footer">
+    <p>
+      GitHub Pages documentation — hosted from <code>/docs</code>.
+    </p>
+  </footer>
 </body>
 </html>

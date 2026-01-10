@@ -1,105 +1,133 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>API - Video Ads SDK</title>
-  <link rel="stylesheet" href="assets/style.css" />
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>API — Video Ads SDK</title>
+  <link rel="stylesheet" href="assets/style.css"/>
 </head>
 <body>
-  <div class="container">
-    <nav class="nav">
-      <a href="index.html">Home</a>
-      <a href="architecture.html">Architecture</a>
-      <a class="active" href="api.html">API</a>
-      <a href="android-sdk.html">Android SDK</a>
-      <a href="example-app.html">Example App</a>
-      <a href="admin-portal.html">Admin Portal</a>
-    </nav>
+  <nav class="nav">
+    <div class="container nav-inner">
+      <a class="brand" href="index.html">🎬 Video Ads SDK</a>
+      <div class="links">
+        <a href="android-sdk.html">Android SDK</a>
+        <a class="active" href="api.html">API</a>
+        <a href="admin-portal.html">Admin</a>
+        <a href="example-app.html">Example</a>
+        <a href="architecture.html">Architecture</a>
+      </div>
+    </div>
+  </nav>
 
-    <div class="card">
-      <h1>API Reference</h1>
-      <p>Base URL: <code>https://video-ads-sdk.onrender.com</code></p>
+  <main class="container page">
+    <h1>Backend API</h1>
+    <p>Base URL example: <code>https://video-ads-sdk.onrender.com/</code></p>
 
+    <section class="box">
       <h2>Health</h2>
-      <p><b>GET</b> <code>/health</code></p>
-<pre><code>{
-  "status": "ok"
-}</code></pre>
+      <pre><code class="code">GET /health</code></pre>
+    </section>
 
-      <hr/>
+    <section class="box">
+      <h2>Categories</h2>
+      <pre><code class="code">GET /v1/categories</code></pre>
+    </section>
 
+    <section class="box">
+      <h2>App Config (per app_id)</h2>
+      <pre><code class="code">GET /v1/apps/&lt;app_id&gt;/config
+PUT /v1/apps/&lt;app_id&gt;/config</code></pre>
+
+      <h3>Config format</h3>
+      <pre><code class="code">
+{
+  "config": {
+    "categories": ["TV","CAR","GAME"],
+    "trigger": { "type": "CLICKS", "count": 15 },
+    "x_delay_seconds": 5
+  }
+}
+      </code></pre>
+
+      <p class="note">
+        Trigger supports <b>CLICKS</b> (count) or <b>INTERVAL</b> (seconds).
+      </p>
+    </section>
+
+    <section class="box">
       <h2>Serve Ad</h2>
-      <p><b>GET</b> <code>/v1/serve</code></p>
+      <pre><code class="code">GET /v1/serve?app_id=demo_app&amp;categories=TV,CAR&amp;mode=RANDOM</code></pre>
 
-      <table class="table">
-        <tr><th>Query</th><th>Type</th><th>Description</th></tr>
-        <tr><td>app_id</td><td>string</td><td>Application identifier (required)</td></tr>
-        <tr><td>categories</td><td>string</td><td>Comma-separated categories (optional)</td></tr>
-        <tr><td>mode</td><td>string</td><td>RANDOM / MANUAL (optional, default RANDOM)</td></tr>
-        <tr><td>ad_id</td><td>string</td><td>Required only for MANUAL</td></tr>
-      </table>
-
-      <p class="small">Example:</p>
-<pre><code>GET /v1/serve?app_id=demo_app&categories=TV,CAR,GAME&mode=RANDOM</code></pre>
-
-      <p class="small">Response:</p>
-<pre><code>{
+      <h3>Response</h3>
+      <pre><code class="code">
+{
   "ad": {
-    "app_id": "demo_app",
     "ad_id": "ad_tv_001",
     "category_id": "TV",
     "title": "TV Promo 1",
-    "video_url": "https://example.com/video.mp4",
-    "target_url": "https://example.com",
+    "video_url": "https://...",
+    "target_url": "https://...",
     "status": "active",
-    "created_at": "2026-01-01T12:00:00Z"
+    "created_at": "..."
   },
-  "mode": "RANDOM"
-}</code></pre>
+  "mode": "RANDOM",
+  "app_id": "demo_app",
+  "requested_categories": ["TV","CAR"]
+}
+      </code></pre>
 
-      <hr/>
+      <p class="note">
+        If no ads available, <code>ad</code> will be <code>null</code> and reason will be <code>NO_FILL</code>.
+      </p>
+    </section>
 
-      <h2>Ads CRUD (Per App)</h2>
-
-      <h3>List Ads</h3>
-      <p><b>GET</b> <code>/v1/apps/&lt;app_id&gt;/ads</code></p>
+    <section class="box">
+      <h2>Ads CRUD</h2>
+      <pre><code class="code">
+POST   /v1/ads
+GET    /v1/ads
+GET    /v1/ads/&lt;ad_id&gt;
+PUT    /v1/ads/&lt;ad_id&gt;
+DELETE /v1/ads/&lt;ad_id&gt;
+      </code></pre>
 
       <h3>Create Ad</h3>
-      <p><b>POST</b> <code>/v1/apps/&lt;app_id&gt;/ads</code></p>
-      <p class="small">Body (JSON):</p>
-<pre><code>{
-  "ad_id": "ad_custom_001",
+      <pre><code class="code">
+POST /v1/ads
+Content-Type: application/json
+
+{
+  "ad_id": "ad_tv_004",
   "category_id": "TV",
-  "title": "My Ad",
-  "video_url": "https://example.com/myvideo.mp4",
-  "target_url": "https://example.com"
-}</code></pre>
-      <p class="small">Notes: <code>ad_id</code> is optional; if omitted, the server generates one.</p>
+  "title": "TV promo 4",
+  "video_url": "https://example.com/video.mp4",
+  "target_url": "https://example.com",
+  "status": "active"
+}
+      </code></pre>
 
-      <h3>Delete Ad</h3>
-      <p><b>DELETE</b> <code>/v1/apps/&lt;app_id&gt;/ads/&lt;ad_id&gt;</code></p>
-
-      <hr/>
-
-      <h2>App Config (Used by SDK)</h2>
-      <p>
-        The SDK can fetch and update configuration per <code>app_id</code>.
-        This controls trigger type (CLICKS / INTERVAL), categories, and X delay.
+      <p class="note">
+        <code>target_url</code> is optional. If omitted, SDK plays the video but clicking does not redirect.
       </p>
+    </section>
 
-      <p><b>GET</b> <code>/v1/apps/&lt;app_id&gt;/config</code></p>
-      <p><b>PUT</b> <code>/v1/apps/&lt;app_id&gt;/config</code></p>
+    <section class="box">
+      <h2>Testing with curl</h2>
+      <pre><code class="code">
+curl https://video-ads-sdk.onrender.com/health
 
-      <p class="small">Config shape:</p>
-<pre><code>{
-  "categories": ["TV", "CAR", "GAME"],
-  "trigger": { "type": "CLICKS", "count": 15 },
-  "x_delay_seconds": 5
-}</code></pre>
+curl "https://video-ads-sdk.onrender.com/v1/serve?app_id=demo_app&categories=TV,CAR,GAME&mode=RANDOM"
+
+curl -X POST https://video-ads-sdk.onrender.com/v1/ads \
+  -H "Content-Type: application/json" \
+  -d "{\"ad_id\":\"ad_tv_004\",\"category_id\":\"TV\",\"title\":\"TV promo 4\",\"video_url\":\"https://example.com/v.mp4\"}"
+      </code></pre>
+    </section>
+
+    <div class="back">
+      <a href="index.html">← Back to home</a>
     </div>
-
-    <div class="footer">© Video Ads SDK Documentation</div>
-  </div>
+  </main>
 </body>
 </html>

@@ -1,48 +1,67 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Admin Portal - Video Ads SDK</title>
-  <link rel="stylesheet" href="assets/style.css" />
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Admin Portal — Video Ads SDK</title>
+  <link rel="stylesheet" href="assets/style.css"/>
 </head>
 <body>
-  <div class="container">
-    <nav class="nav">
-      <a href="index.html">Home</a>
-      <a href="architecture.html">Architecture</a>
-      <a href="api.html">API</a>
-      <a href="android-sdk.html">Android SDK</a>
-      <a href="example-app.html">Example App</a>
-      <a class="active" href="admin-portal.html">Admin Portal</a>
-    </nav>
-
-    <div class="card">
-      <h1>Admin Portal</h1>
-      <p>
-        The Admin Portal is a static HTML page served by the API service. It allows managing ads per
-        <code>app_id</code> and interacts with the backend using REST calls.
-      </p>
-
-      <h2>Access</h2>
-<pre><code>https://video-ads-sdk.onrender.com/admin</code></pre>
-
-      <h2>Capabilities</h2>
-      <ul style="color:var(--muted); line-height:1.7; margin:0;">
-        <li>View existing ads for an application</li>
-        <li>Create new ads using <code>video_url</code> (MP4)</li>
-        <li>Delete ads</li>
-      </ul>
-
-      <h2>Screenshot</h2>
-      <img class="shot" src="assets/screenshots/admin.png" alt="Admin Portal Screenshot" />
-
-      <p class="small">
-        Note: Authentication is not enabled (demo scope).
-      </p>
+  <nav class="nav">
+    <div class="container nav-inner">
+      <a class="brand" href="index.html">🎬 Video Ads SDK</a>
+      <div class="links">
+        <a href="android-sdk.html">Android SDK</a>
+        <a href="api.html">API</a>
+        <a class="active" href="admin-portal.html">Admin</a>
+        <a href="example-app.html">Example</a>
+        <a href="architecture.html">Architecture</a>
+      </div>
     </div>
+  </nav>
 
-    <div class="footer">© Video Ads SDK Documentation</div>
-  </div>
+  <main class="container page">
+    <h1>Admin Portal</h1>
+    <p>
+      The Admin Portal is a simple web UI for managing ads in MongoDB via the backend API.
+      It supports listing existing ads, creating new ads, and deleting ads.
+    </p>
+
+    <section class="box">
+      <h2>How to open</h2>
+      <p>
+        If your backend runs on Render, open:
+        <code>https://video-ads-sdk.onrender.com/admin</code>
+      </p>
+      <p class="note">
+        The portal uses <b>App ID</b> to manage content per application.
+      </p>
+    </section>
+
+    <section class="box">
+      <h2>Features</h2>
+      <ul>
+        <li><b>Load Ads</b> — view all ads for a specific <code>app_id</code></li>
+        <li><b>Upload / Create</b> — add a new ad (URL-based)</li>
+        <li><b>Delete</b> — remove an ad permanently</li>
+      </ul>
+    </section>
+
+    <section class="box">
+      <h2>Why URL-based?</h2>
+      <p>
+        For this project, ads are stored as <b>URLs</b> in the database (<code>video_url</code>).
+        This keeps the backend simple and cloud-friendly.
+      </p>
+      <ul>
+        <li>You can host MP4 files anywhere (CDN, public storage, etc.).</li>
+        <li>No need to upload files to the backend server.</li>
+      </ul>
+    </section>
+
+    <div class="back">
+      <a href="index.html">← Back to home</a>
+    </div>
+  </main>
 </body>
 </html>
