@@ -13,50 +13,114 @@
       <div class="links">
         <a href="android-sdk.html">Android SDK</a>
         <a href="api.html">API</a>
-        <a class="active" href="admin-portal.html">Admin</a>
-        <a href="example-app.html">Example</a>
+        <a class="active" href="admin-portal.html">Admin Portal</a>
         <a href="architecture.html">Architecture</a>
       </div>
     </div>
   </nav>
 
   <main class="container page">
-    <h1>Admin Portal</h1>
+    <h1>Admin Portal (URL-based)</h1>
     <p>
-      The Admin Portal is a simple web UI for managing ads in MongoDB via the backend API.
-      It supports listing existing ads, creating new ads, and deleting ads.
+      The Admin Portal is a lightweight web UI for managing ads stored in MongoDB through the backend API.
+      It is designed for simple operations only:
+      <b>Load existing ads</b>, <b>Add a new ad</b> (URL-based), and <b>Delete an ad</b>.
     </p>
 
     <section class="box">
-      <h2>How to open</h2>
+      <h2>How to Open</h2>
       <p>
-        If your backend runs on Render, open:
+        When the backend is deployed (e.g., Render), open:
         <code>https://video-ads-sdk.onrender.com/admin</code>
       </p>
       <p class="note">
-        The portal uses <b>App ID</b> to manage content per application.
+        The Admin Portal is a convenience UI. It calls the same public REST API endpoints described in the <a href="api.html">API page</a>.
       </p>
     </section>
 
     <section class="box">
-      <h2>Features</h2>
-      <ul>
-        <li><b>Load Ads</b> — view all ads for a specific <code>app_id</code></li>
-        <li><b>Upload / Create</b> — add a new ad (URL-based)</li>
-        <li><b>Delete</b> — remove an ad permanently</li>
-      </ul>
-    </section>
-
-    <section class="box">
-      <h2>Why URL-based?</h2>
+      <h2>App ID (Why it matters)</h2>
       <p>
-        For this project, ads are stored as <b>URLs</b> in the database (<code>video_url</code>).
-        This keeps the backend simple and cloud-friendly.
+        Ads are managed per application using <code>app_id</code>.
+        This allows multiple client apps to use the same backend + database while keeping their ads separated.
       </p>
       <ul>
-        <li>You can host MP4 files anywhere (CDN, public storage, etc.).</li>
-        <li>No need to upload files to the backend server.</li>
+        <li><b>demo_app</b> is the default demo application id (used in seed data).</li>
+        <li>When a developer integrates the SDK, they set <code>appId</code> in <code>AdsSdk.init()</code>.</li>
+        <li>The backend serves ads matching that <code>app_id</code> only.</li>
       </ul>
+    </section>
+
+    <section class="box">
+      <h2>Portal Screen Overview</h2>
+      <ol>
+        <li>
+          <b>App ID + Load Ads</b> — enter an <code>app_id</code> and click <b>Load Ads</b> to fetch ads for that app.
+        </li>
+        <li>
+          <b>Add New Ad</b> — fill details and click <b>Add</b> to create a new ad under the selected <code>app_id</code>.
+        </li>
+        <li>
+          <b>Existing Ads Table</b> — shows all current ads for the selected <code>app_id</code>, with quick links and delete actions.
+        </li>
+      </ol>
+    </section>
+
+    <section class="box">
+      <h2>Adding a New Ad (Fields)</h2>
+      <p>
+        The portal is <b>URL-based</b>. You do not upload files to the server.
+        Instead, you store a <b>direct video URL</b> (usually MP4) that the SDK can stream.
+      </p>
+
+      <ul>
+        <li><b>Category</b> (<code>category_id</code>) — must match existing categories (e.g., TV / CAR / GAME).</li>
+        <li><b>Title</b> — a human-friendly name displayed in admin tables/logs.</li>
+        <li><b>Ad ID (optional)</b> — if empty, backend auto-generates an id.</li>
+        <li><b>Video URL (mp4)</b> — required. This is the video shown inside the SDK.</li>
+        <li><b>Target URL (optional)</b> — if provided, clicking the video can open this link.</li>
+      </ul>
+
+      <p class="note">
+        <b>If Target URL is empty:</b> the video still plays normally. Clicking the ad will simply do nothing (no redirect).
+      </p>
+    </section>
+
+    <section class="box">
+      <h2>Existing Ads Table</h2>
+      <p>
+        After clicking <b>Load Ads</b>, you will see a table of ads for that <code>app_id</code>.
+      </p>
+      <ul>
+        <li><b>Video / Target “open” links</b> are direct links to verify URLs quickly.</li>
+        <li><b>Delete</b> removes the ad from the database permanently.</li>
+      </ul>
+      <p class="note">
+        Deleting an ad means it will no longer be served by <code>/v1/serve</code>, and the SDK will stop showing it.
+      </p>
+    </section>
+
+    <section class="box">
+      <h2>What happens when a user clicks the ad many times?</h2>
+      <p>
+        The SDK decides <b>when</b> to show an ad based on the trigger mode (CLICKS or INTERVAL).
+        When it’s time to show an ad, the SDK requests one ad from the backend.
+      </p>
+      <ul>
+        <li>If your backend serves ads in <b>RANDOM</b> mode, repeated triggers may show different ads.</li>
+        <li>If your backend serves ads in a deterministic mode, it may repeat the same ad (depending on implementation).</li>
+      </ul>
+      <p class="note">
+        In the current design, the portal manages content only (add/delete/list). Rotation logic is handled by the backend serve endpoint.
+      </p>
+    </section>
+
+    <section class="box">
+      <h2>Security note</h2>
+      <p>
+        This portal is intended for a course/demo environment.
+        In a production system you would protect it (authentication + authorization) and validate uploaded URLs.
+      </p>
     </section>
 
     <div class="back">
