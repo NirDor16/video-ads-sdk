@@ -21,34 +21,9 @@ The system allows developers to easily integrate video advertisements into Andro
 
 ---
 
-## 🏗 Architecture Overview
 
+<img width="397" height="552" alt="image" src="https://github.com/user-attachments/assets/b87c38ee-8c4e-4c24-a0f4-849cba994fcf" />
 
-
-## 🏗 Architecture Overview
-
-+-------------------+
-| Admin Web Portal |
-| (Browser) |
-+---------+---------+
-|
-v
-+-------------------+ +-------------------+
-| REST API Service | <----> | MongoDB Atlas |
-| (Flask) | | (Cloud Database) |
-+---------+---------+ +-------------------+
-^
-|
-+---------+---------+
-| Android SDK |
-| (Kotlin Library) |
-+---------+---------+
-^
-|
-+---------+---------+
-| Example Android |
-| Application |
-+-------------------+
 
 
 ---
@@ -70,6 +45,7 @@ The backend API service is responsible for:
 https://video-ads-sdk.onrender.com
 
 ### Admin Portal : https://video-ads-sdk.onrender.com/admin
+<img width="1889" height="471" alt="image" src="https://github.com/user-attachments/assets/930c7e5c-6657-46d6-a549-c5bd67f81d64" />
 
 
 ### Environment Variables
@@ -208,8 +184,20 @@ Explanation:
 
 📜 License
 
-This project is licensed under the MIT License.
-See the LICENSE file for more details.
+Copyright 2026 Nir Dor
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
 
 
 
