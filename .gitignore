@@ -1,17 +1,28 @@
-# Python
+# ---- Python / Flask ----
 __pycache__/
 *.pyc
-
-# Virtual environments
+*.py[cod]
 .venv/
 venv/
 
-# Environment variables
+# ---- Env / Secrets ----
 .env
+.env.*
 
-# IDE
+# ---- IDE ----
 .vscode/
+.idea/
+*.iml
 
-# OS
+# ---- OS ----
 .DS_Store
 Thumbs.db
+
+# ---- Gradle / Android ----
+.gradle/
+build/
+**/build/
+local.properties
+/captures
+.externalNativeBuild/
+.cxx/
