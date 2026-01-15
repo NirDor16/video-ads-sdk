@@ -168,7 +168,7 @@ Explanation:
 
 - Manage ads per application using app_id
 
-📄 Documentation
+📄 Documentation - https://nirdor16.github.io/video-ads-sdk/index.html
 
 - Additional documentation is available in the docs/ directory and includes:
 
@@ -181,6 +181,9 @@ Explanation:
 - Setup instructions
 
 - The documentation is published via GitHub Pages.
+
+<img width="1304" height="674" alt="image" src="https://github.com/user-attachments/assets/b4d7fbe3-90b8-44b0-aba0-b38822c1f12b" />
+
 
 📜 License
 
