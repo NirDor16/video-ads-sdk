@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Android SDK — Video Ads SDK</title>
+  <link rel="stylesheet" href="assets/style.css"/>
+</head>
+<body>
+  <nav class="nav">
+    <div class="container nav-inner">
+      <a class="brand" href="index.html">🎬 Video Ads SDK</a>
+      <div class="links">
+        <a class="active" href="android-sdk.html">Android SDK</a>
+        <a href="api.html">API</a>
+        <a href="admin-portal.html">Admin</a>
+        <a href="architecture.html">Architecture</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="container page">
+    <h1>Android SDK</h1>
+    <p>
+      The Android SDK integrates full-screen video ads into your app with minimal code.
+      It automatically tracks screen lifecycle and user interactions across the entire app.
+    </p>
+
+    <section class="box">
+      <h2>Quick Start</h2>
+
+      <h3>1) Add JitPack + dependency</h3>
+      <pre><code class="code">
+repositories {
+    maven { url "https://jitpack.io" }
+}
+
+dependencies {
+    implementation "com.github.NirDor16:video-ads-sdk:0.3.0"
+}
+      </code></pre>
+
+      <h3>2) Initialize the SDK once</h3>
+      <p><b>Required:</b> call <code>AdsSdk.init()</code> once at app startup.</p>
+      <pre><code class="code">
+AdsSdk.init(
+    context = applicationContext,
+    baseUrl = "https://video-ads-sdk.onrender.com/",
+    appId = "demo_app"
+)
+      </code></pre>
+      <p class="note">
+        <b>Tip:</b> The best place is <code>Application.onCreate()</code>.
+        Alternative: <code>MainActivity.onCreate()</code>.
+      </p>
+    </section>
+
+    <section class="box">
+      <h2>Complete Initialization Example (MainActivity)</h2>
+      <p>
+        <code>setPreferences()</code> is <b>optional</b>. If you do not call it, the SDK will work with the backend server defaults.
+        Use it when you want to override: categories, trigger mode, click count / interval seconds, and X delay.
+      </p>
+
+      <pre><code class="code">
+override fun onCreate(savedInstanceState: Bundle?) {
+    super.onCreate(savedInstanceState)
+    binding = ActivityMainBinding.inflate(layoutInflater)
+    setContentView(binding.root)
+
+    // --- Init SDK (ONLY required call in app code) ---
+    AdsSdk.init(
+        context = applicationContext,
+        baseUrl = "https://video-ads-sdk.onrender.com/",
+        appId = "demo_app"
+    )
+
+    // --- Optional: SDK Preferences ---
+    // Example 1: Click-based ads (show ad every 5 clicks)
+    lifecycleScope.launch {
+        AdsSdk.setPreferences(
+            categories = listOf("TV", "CAR", "GAME"),
+            triggerType = "CLICKS",
+            clicksCount = 5,
+            xDelaySeconds = 5
+        )
+    }
+
+    /*
+    // Example 2: Interval-based ads (show ad every 30 seconds)
+    lifecycleScope.launch {
+        AdsSdk.setPreferences(
+            categories = listOf("TV", "CAR", "GAME"),
+            triggerType = "INTERVAL",
+            intervalSeconds = 30,
+            xDelaySeconds = 5
+        )
+    }
+    */
+}
+      </code></pre>
+
+      <h3>Trigger modes</h3>
+      <ul>
+        <li><b>CLICKS</b>: show an ad after <code>clicksCount</code> user interactions.</li>
+        <li><b>INTERVAL</b>: show an ad every <code>intervalSeconds</code> while the app is in foreground.</li>
+      </ul>
+
+      <h3>What if target_url is null?</h3>
+      <p class="note">
+        If <code>target_url</code> is not provided, the ad still plays normally. Clicking the video will simply do nothing (no redirect).
+      </p>
+    </section>
+
+    <section class="box">
+      <h2>Multi-Screen Applications</h2>
+      <p>
+        The SDK fully supports apps with multiple screens (multiple Activities).
+        <b>You only initialize once</b>. No additional integration is required in other screens.
+      </p>
+
+      <h3>How it works internally</h3>
+      <ul>
+        <li>Tracks Activity lifecycle globally via <code>Application.ActivityLifecycleCallbacks</code></li>
+        <li>Monitors user interactions across all screens (touch interception)</li>
+        <li>Detects the currently visible Activity</li>
+        <li>Shows the ad on the currently visible Activity when the trigger is met</li>
+      </ul>
+
+      <h3>Behavior across screens</h3>
+      <ul>
+        <li>The click counter continues across screens (it is not reset when navigating between activities).</li>
+        <li>When an ad is triggered, it is shown on the current visible screen.</li>
+        <li>The previous screen state is preserved (ad is an overlay Activity).</li>
+      </ul>
+    </section>
+
+    <section class="box">
+      <h2>Server Config vs Local Preferences</h2>
+      <ul>
+        <li><b>Default behavior:</b> SDK pulls config from backend (app-based config).</li>
+        <li><b>Optional:</b> calling <code>setPreferences()</code> updates backend config for this <code>appId</code>.</li>
+        <li>After that, SDK refreshes config and continues automatically.</li>
+      </ul>
+    </section>
+
+    <section class="box">
+      <h2>Troubleshooting</h2>
+      <ul>
+        <li><b>No ads shown:</b> check that backend has active ads for your categories.</li>
+        <li><b>Wrong baseUrl:</b> must end with <code>/</code> (SDK handles it, but keep it clean).</li>
+        <li><b>App has many screens:</b> no changes needed; init once and you’re done.</li>
+      </ul>
+    </section>
+
+    <div class="back">
+      <a href="index.html">← Back to home</a>
+    </div>
+  </main>
+</body>
+</html>

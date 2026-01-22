@@ -1,0 +1,149 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Video Ads Admin</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    h2, h3 { margin-top: 0; }
+    input, select, button { padding: 6px; margin: 4px 0; }
+    table { border-collapse: collapse; width: 100%; margin-top: 12px; }
+    th, td { border: 1px solid #ddd; padding: 8px; font-size: 14px; }
+    th { background: #f5f5f5; }
+    .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
+    .card { border: 1px solid #ddd; padding: 14px; border-radius: 8px; margin-top: 16px; }
+    .danger { background: #fff0f0; }
+    .small { font-size: 12px; color: #666; }
+    pre { background: #111; color: #0f0; padding: 12px; border-radius: 6px; margin-top: 12px; }
+  </style>
+</head>
+<body>
+
+<h2>🎬 Video Ads Admin (URL-based)</h2>
+
+<div class="card">
+  <label><b>App ID:</b></label><br/>
+  <input id="appId" value="demo_app" />
+  <button onclick="refreshAds()">Load Ads</button>
+  <div class="small">ניהול פרסומות לפי אפליקציה</div>
+</div>
+
+<div class="card">
+  <h3>➕ Add New Ad</h3>
+
+  <div class="row">
+    <div>
+      <label>Category:</label><br/>
+      <select id="category">
+        <option value="TV">TV</option>
+        <option value="CAR">CAR</option>
+        <option value="GAME">GAME</option>
+      </select>
+    </div>
+
+    <div>
+      <label>Title:</label><br/>
+      <input id="title" placeholder="Ad title"/>
+    </div>
+
+    <div>
+      <label>Ad ID (optional):</label><br/>
+      <input id="adId" placeholder="ad_tv_004"/>
+    </div>
+
+    <div style="min-width:300px">
+      <label>Video URL (mp4):</label><br/>
+      <input id="videoUrl" placeholder="https://example.com/video.mp4" style="width:100%"/>
+    </div>
+
+    <div style="min-width:260px">
+      <label>Target URL (optional):</label><br/>
+      <input id="targetUrl" placeholder="https://example.com" style="width:100%"/>
+    </div>
+
+    <div>
+      <button onclick="addAd()">Add</button>
+    </div>
+  </div>
+</div>
+
+<div class="card danger">
+  <h3>📋 Existing Ads</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Ad ID</th>
+        <th>Category</th>
+        <th>Title</th>
+        <th>Video</th>
+        <th>Target</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody id="adsBody"></tbody>
+  </table>
+</div>
+
+<pre id="out"></pre>
+
+<script>
+const out = t => document.getElementById("out").textContent = t;
+const appId = () => document.getElementById("appId").value.trim();
+
+async function refreshAds() {
+  const r = await fetch(`/v1/apps/${encodeURIComponent(appId())}/ads`);
+  const j = await r.json();
+
+  const body = document.getElementById("adsBody");
+  body.innerHTML = "";
+
+  (j.ads || []).forEach(ad => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${ad.ad_id}</td>
+      <td>${ad.category_id}</td>
+      <td>${ad.title}</td>
+      <td><a href="${ad.video_url}" target="_blank">open</a></td>
+      <td>${ad.target_url ? `<a href="${ad.target_url}" target="_blank">open</a>` : ""}</td>
+      <td><button onclick="deleteAd('${ad.ad_id}')">Delete</button></td>
+    `;
+    body.appendChild(tr);
+  });
+
+  out(JSON.stringify(j, null, 2));
+}
+
+async function addAd() {
+  const payload = {
+    ad_id: document.getElementById("adId").value,
+    category_id: document.getElementById("category").value,
+    title: document.getElementById("title").value,
+    video_url: document.getElementById("videoUrl").value,
+    target_url: document.getElementById("targetUrl").value
+  };
+
+  const r = await fetch(`/v1/apps/${encodeURIComponent(appId())}/ads`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+
+  const j = await r.json();
+  out(JSON.stringify(j, null, 2));
+  refreshAds();
+}
+
+async function deleteAd(adId) {
+  if (!confirm(`Delete ad ${adId}?`)) return;
+
+  const r = await fetch(`/v1/apps/${encodeURIComponent(appId())}/ads/${encodeURIComponent(adId)}`, {
+    method: "DELETE"
+  });
+  const j = await r.json();
+  out(JSON.stringify(j, null, 2));
+  refreshAds();
+}
+</script>
+
+</body>
+</html>

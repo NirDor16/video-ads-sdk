@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>API — Video Ads SDK</title>
+  <link rel="stylesheet" href="assets/style.css"/>
+</head>
+<body>
+  <nav class="nav">
+    <div class="container nav-inner">
+      <a class="brand" href="index.html">🎬 Video Ads SDK</a>
+      <div class="links">
+        <a href="android-sdk.html">Android SDK</a>
+        <a class="active" href="api.html">API</a>
+        <a href="admin-portal.html">Admin</a>
+        <a href="architecture.html">Architecture</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="container page">
+    <h1>Backend API</h1>
+    <p>Base URL example: <code>https://video-ads-sdk.onrender.com/</code></p>
+
+    <section class="box">
+      <h2>Health</h2>
+      <pre><code class="code">GET /health</code></pre>
+    </section>
+
+    <section class="box">
+      <h2>Categories</h2>
+      <pre><code class="code">GET /v1/categories</code></pre>
+    </section>
+
+    <section class="box">
+      <h2>App Config (per app_id)</h2>
+      <pre><code class="code">GET /v1/apps/&lt;app_id&gt;/config
+PUT /v1/apps/&lt;app_id&gt;/config</code></pre>
+
+      <h3>Config format</h3>
+      <pre><code class="code">
+{
+  "config": {
+    "categories": ["TV","CAR","GAME"],
+    "trigger": { "type": "CLICKS", "count": 15 },
+    "x_delay_seconds": 5
+  }
+}
+      </code></pre>
+
+      <p class="note">
+        Trigger supports <b>CLICKS</b> (count) or <b>INTERVAL</b> (seconds).
+      </p>
+    </section>
+
+    <section class="box">
+      <h2>Serve Ad</h2>
+      <pre><code class="code">GET /v1/serve?app_id=demo_app&amp;categories=TV,CAR&amp;mode=RANDOM</code></pre>
+
+      <h3>Response</h3>
+      <pre><code class="code">
+{
+  "ad": {
+    "ad_id": "ad_tv_001",
+    "category_id": "TV",
+    "title": "TV Promo 1",
+    "video_url": "https://...",
+    "target_url": "https://...",
+    "status": "active",
+    "created_at": "..."
+  },
+  "mode": "RANDOM",
+  "app_id": "demo_app",
+  "requested_categories": ["TV","CAR"]
+}
+      </code></pre>
+
+      <p class="note">
+        If no ads available, <code>ad</code> will be <code>null</code> and reason will be <code>NO_FILL</code>.
+      </p>
+    </section>
+
+    <section class="box">
+      <h2>Ads CRUD</h2>
+      <pre><code class="code">
+POST   /v1/ads
+GET    /v1/ads
+GET    /v1/ads/&lt;ad_id&gt;
+PUT    /v1/ads/&lt;ad_id&gt;
+DELETE /v1/ads/&lt;ad_id&gt;
+      </code></pre>
+
+      <h3>Create Ad</h3>
+      <pre><code class="code">
+POST /v1/ads
+Content-Type: application/json
+
+{
+  "ad_id": "ad_tv_004",
+  "category_id": "TV",
+  "title": "TV promo 4",
+  "video_url": "https://example.com/video.mp4",
+  "target_url": "https://example.com",
+  "status": "active"
+}
+      </code></pre>
+
+      <p class="note">
+        <code>target_url</code> is optional. If omitted, SDK plays the video but clicking does not redirect.
+      </p>
+    </section>
+
+    <section class="box">
+      <h2>Testing with curl</h2>
+      <pre><code class="code">
+curl https://video-ads-sdk.onrender.com/health
+
+curl "https://video-ads-sdk.onrender.com/v1/serve?app_id=demo_app&categories=TV,CAR,GAME&mode=RANDOM"
+
+curl -X POST https://video-ads-sdk.onrender.com/v1/ads \
+  -H "Content-Type: application/json" \
+  -d "{\"ad_id\":\"ad_tv_004\",\"category_id\":\"TV\",\"title\":\"TV promo 4\",\"video_url\":\"https://example.com/v.mp4\"}"
+      </code></pre>
+    </section>
+
+    <div class="back">
+      <a href="index.html">← Back to home</a>
+    </div>
+  </main>
+</body>
+</html>

@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Architecture — Video Ads SDK</title>
+  <link rel="stylesheet" href="assets/style.css"/>
+</head>
+<body>
+  <nav class="nav">
+    <div class="container nav-inner">
+      <a class="brand" href="index.html">🎬 Video Ads SDK</a>
+      <div class="links">
+        <a href="android-sdk.html">Android SDK</a>
+        <a href="api.html">API</a>
+        <a href="admin-portal.html">Admin</a>
+        <a class="active" href="architecture.html">Architecture</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="container page">
+    <h1>Architecture</h1>
+
+    <section class="box">
+      <h2>Components</h2>
+      <ul>
+        <li><b>Backend API (Flask)</b> — serves ads, stores config, exposes CRUD endpoints.</li>
+        <li><b>MongoDB Atlas</b> — stores categories, ads, and per-app config.</li>
+        <li><b>Android SDK</b> — fetches ads & config, tracks user interactions, shows video ads.</li>
+        <li><b>Example App</b> — demonstrates integration & triggers.</li>
+        <li><b>Admin Portal</b> — manages ads (list/create/delete).</li>
+      </ul>
+    </section>
+
+    <section class="box">
+      <h2>Flow</h2>
+      <ol>
+        <li>App calls <code>AdsSdk.init()</code> once.</li>
+        <li>SDK pulls <b>app config</b> from <code>/v1/apps/{appId}/config</code>.</li>
+        <li>SDK tracks clicks/interval across screens.</li>
+        <li>When trigger is met, SDK requests an ad: <code>/v1/serve</code>.</li>
+        <li>SDK shows full-screen video player (AdPlayerActivity).</li>
+      </ol>
+    </section>
+
+    <section class="box">
+      <h2>Multi-screen support</h2>
+      <p>
+        The SDK automatically hooks all Activities and intercepts touch events at the Window level.
+        This allows global click counting and ad showing without adding code in each screen.
+      </p>
+    </section>
+
+    <div class="back">
+      <a href="index.html">← Back to home</a>
+    </div>
+  </main>
+</body>
+</html>

@@ -1,15 +1,28 @@
+# ---- Python / Flask ----
+__pycache__/
+*.pyc
+*.py[cod]
+.venv/
+venv/
+
+# ---- Env / Secrets ----
+.env
+.env.*
+
+# ---- IDE ----
+.vscode/
+.idea/
 *.iml
-.gradle
-/local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
+
+# ---- OS ----
 .DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
+Thumbs.db
+
+# ---- Gradle / Android ----
+.gradle/
+build/
+**/build/
 local.properties
+/captures
+.externalNativeBuild/
+.cxx/
