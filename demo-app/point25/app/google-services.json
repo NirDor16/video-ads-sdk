@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "554817446442",
+    "project_id": "point25-c1452",
+    "storage_bucket": "point25-c1452.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:554817446442:android:5f7375a855cfea9f151953",
+        "android_client_info": {
+          "package_name": "com.example.point25"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBqV9CtwNOFfP9-dx71Xvdx8etlqFkAVn4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
