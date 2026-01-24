@@ -20,14 +20,7 @@ import com.example.videoadssdk.model.AppConfig
 import com.example.videoadssdk.model.Trigger
 import com.example.videoadssdk.model.UpdateConfigRequest
 import com.example.videoadssdk.player.AdPlayerActivity
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.*
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
@@ -36,42 +29,75 @@ import java.util.WeakHashMap
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
+/**
+ * Main SDK singleton.
+ * Responsible for:
+ * - Initializing networking
+ * - Fetching remote configuration
+ * - Auto-tracking user interactions across all activities
+ * - Deciding when and how to show ads
+ */
 object AdsSdk {
 
+    // Indicates whether the SDK was initialized
     private var initialized = false
+
+    // Retrofit API interface
     private lateinit var api: AdsApi
+
+    // Application identifier (sent with every request)
     private lateinit var appId: String
 
+    // Latest configuration fetched from the server
+    // Volatile ensures visibility across threads
     @Volatile
     private var config: AppConfig = AppConfig()
 
+    // Click counter for CLICKS trigger mode
     private var clickCounter = 0
 
-    // INTERVAL
+    // Interval trigger state
     private var lastAdShownAtMs = 0L
     private var intervalJob: Job? = null
 
+    // Prevents showing multiple ads simultaneously
     private val isShowing = AtomicBoolean(false)
+
+    // Main coroutine scope for SDK operations
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
-    // app foreground tracking
+    // Tracks whether the app is currently in foreground
     private val isAppOpen = AtomicBoolean(false)
 
-    // ---- auto tracking ----
+    // ---- Auto tracking state ----
+
+    // Prevents registering lifecycle callbacks more than once
     private var lifecycleRegistered = false
+
+    // Number of currently resumed activities
     private var resumedActivities = 0
+
+    // Stores original Window.Callback per activity (weakly)
     private val windowCallbacks = WeakHashMap<Activity, Window.Callback>()
+
+    // Reference to the currently visible activity (used by INTERVAL scheduler)
     private var currentActivityRef: WeakReference<Activity>? = null
 
     /**
-     * Call once at app start
-     * - auto hooks all activities
-     * - auto pulls config (with small retry)
+     * Initializes the SDK.
+     * Should be called once at application startup.
+     *
+     * - Sets up networking
+     * - Hooks into all activities automatically
+     * - Fetches remote configuration with retries
      */
     fun init(context: Context, baseUrl: String, appId: String) {
         this.appId = appId.trim()
+
+        // Ensure base URL ends with a single slash
         val fixedBaseUrl = baseUrl.trim().trimEnd('/') + "/"
 
+        // Configure HTTP client with safe timeouts
         val okHttp = OkHttpClient.Builder()
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
@@ -79,6 +105,7 @@ object AdsSdk {
             .callTimeout(60, TimeUnit.SECONDS)
             .build()
 
+        // Build Retrofit API client
         api = Retrofit.Builder()
             .baseUrl(fixedBaseUrl)
             .client(okHttp)
@@ -88,10 +115,10 @@ object AdsSdk {
 
         initialized = true
 
-        // ✅ Multi-screen apps: auto hook all Activities + all taps
+        // Automatically hook all activities and user taps
         registerAutoTracking(context.applicationContext)
 
-        // ✅ Pull config automatically (with a few retries)
+        // Fetch config with limited retry attempts
         scope.launch {
             repeat(3) { attempt ->
                 try {
@@ -105,7 +132,8 @@ object AdsSdk {
     }
 
     /**
-     * Fetch latest config from server
+     * Fetches the latest configuration from the backend.
+     * Resets local counters and updates interval scheduler state.
      */
     suspend fun refreshConfig(): AppConfig {
         check(initialized) { "AdsSdk not initialized. Call init() first." }
@@ -113,18 +141,19 @@ object AdsSdk {
         val resp = withContext(Dispatchers.IO) { api.getConfig(appId) }
         config = resp.config
 
-        // reset counters when config changes
+        // Reset state when config changes
         clickCounter = 0
         lastAdShownAtMs = 0L
 
-        // ✅ if INTERVAL is enabled while app is open, start scheduler
+        // Restart interval scheduler if needed
         startOrStopIntervalScheduler()
 
         return config
     }
 
     /**
-     * Count a click (auto called by SDK touch hook when trigger=CLICKS)
+     * Registers a click event.
+     * Only active when trigger type is CLICKS and app is in foreground.
      */
     fun registerClick() {
         if (!initialized) return
@@ -134,8 +163,9 @@ object AdsSdk {
     }
 
     /**
-     * Decide whether to show ad now (CLICKS or INTERVAL).
-     * In INTERVAL mode, scheduler is the main engine; this remains as a safe fallback.
+     * Determines whether an ad should be shown now.
+     * - In CLICKS mode: checks click counter
+     * - In INTERVAL mode: handled mainly by scheduler
      */
     fun maybeShowAd(activityProvider: () -> Activity?) {
         if (!initialized) return
@@ -153,8 +183,7 @@ object AdsSdk {
             }
 
             "INTERVAL" -> {
-                // fallback: do nothing (scheduler handles it),
-                // but we can still allow a manual check if needed.
+                // Scheduler handles interval-based ads
             }
 
             else -> Unit
@@ -162,8 +191,8 @@ object AdsSdk {
     }
 
     /**
-     * Developer-controlled preferences (optional).
-     * Note: dev can call this once; SDK will keep working automatically afterwards.
+     * Allows developers to update ad preferences manually.
+     * Updates server config and refreshes local state.
      */
     suspend fun setPreferences(
         categories: List<String>,
@@ -174,6 +203,7 @@ object AdsSdk {
     ): AppConfig {
         check(initialized) { "AdsSdk not initialized. Call init() first." }
 
+        // Normalize category list
         val cleanedCats = categories
             .map { it.trim().uppercase() }
             .filter { it.isNotBlank() }
@@ -181,6 +211,7 @@ object AdsSdk {
 
         val t = triggerType.trim().uppercase()
 
+        // Build trigger configuration
         val newTrigger = if (t == "INTERVAL") {
             val sec = (intervalSeconds ?: 120).coerceAtLeast(10)
             Trigger(type = "INTERVAL", count = null, seconds = sec)
@@ -189,12 +220,14 @@ object AdsSdk {
             Trigger(type = "CLICKS", count = cnt, seconds = null)
         }
 
+        // Build updated config
         val newConfig = AppConfig(
             categories = if (cleanedCats.isEmpty()) config.categories else cleanedCats,
             trigger = newTrigger,
             x_delay_seconds = (xDelaySeconds ?: config.x_delay_seconds).coerceIn(5, 30)
         )
 
+        // Push update to server
         withContext(Dispatchers.IO) {
             api.updateConfig(appId, UpdateConfigRequest(newConfig))
         }
@@ -204,6 +237,9 @@ object AdsSdk {
         return refreshed
     }
 
+    /**
+     * Requests an ad from the backend based on current configuration.
+     */
     private suspend fun requestAd(): Ad? {
         val categoriesParam = config.categories
             .map { it.trim().uppercase() }
@@ -222,6 +258,10 @@ object AdsSdk {
         return resp.ad
     }
 
+    /**
+     * Requests an ad and displays it if available.
+     * Ensures only one ad is shown at a time.
+     */
     private suspend fun requestAndShow(activity: Activity) {
         if (!isShowing.compareAndSet(false, true)) return
 
@@ -229,12 +269,15 @@ object AdsSdk {
             val ad = requestAd() ?: return
             showAd(activity, ad)
         } catch (_: Exception) {
-            // ignore
+            // Ignore failures
         } finally {
             isShowing.set(false)
         }
     }
 
+    /**
+     * Launches the ad player activity.
+     */
     fun showAd(activity: Activity, ad: Ad) {
         val xDelay = config.x_delay_seconds.coerceIn(5, 30)
         val intent = AdPlayerActivity.createIntent(
@@ -249,6 +292,10 @@ object AdsSdk {
     // ---------------------------
     // Auto tracking (all screens)
     // ---------------------------
+
+    /**
+     * Registers lifecycle callbacks to automatically hook into all activities.
+     */
     private fun registerAutoTracking(appContext: Context) {
         if (lifecycleRegistered) return
         val app = appContext as? Application ?: return
@@ -262,12 +309,11 @@ object AdsSdk {
                 isAppOpen.set(true)
                 currentActivityRef = WeakReference(activity)
 
-                // don't track clicks inside the ad screen itself
+                // Do not intercept touches inside the ad player itself
                 if (activity !is AdPlayerActivity) {
                     hookWindowCallback(activity)
                 }
 
-                // when resuming, ensure interval scheduler state is correct
                 startOrStopIntervalScheduler()
             }
 
@@ -298,23 +344,29 @@ object AdsSdk {
         })
     }
 
+    /**
+     * Wraps the Window.Callback to intercept touch events.
+     */
     private fun hookWindowCallback(activity: Activity) {
         val window = activity.window ?: return
 
-        // אם שמרנו בעבר original – נשתמש בו
+        // Retrieve original callback (previously saved or current)
         val original = windowCallbacks[activity] ?: window.callback ?: return
 
-        // נשמור original פעם אחת בלבד
+        // Save original callback once
         if (!windowCallbacks.containsKey(activity)) {
             windowCallbacks[activity] = original
         }
 
-        // אם כרגע לא מחובר intercept – נחבר מחדש
+        // Replace callback with interceptor if not already installed
         if (window.callback !is TouchInterceptingCallback) {
             window.callback = TouchInterceptingCallback(original, activity)
         }
     }
 
+    /**
+     * Restores the original Window.Callback.
+     */
     private fun unhookWindowCallback(activity: Activity) {
         val window = activity.window ?: return
         val original = windowCallbacks[activity] ?: return
@@ -323,23 +375,21 @@ object AdsSdk {
             window.callback = original
         }
 
-        // ✅ הכי חשוב: למחוק כדי שב־resume הבא יהיה hook מחדש
         windowCallbacks.remove(activity)
     }
 
-
+    /**
+     * Intercepts touch events while delegating all other behavior
+     * to the original Window.Callback.
+     */
     private class TouchInterceptingCallback(
         private val base: Window.Callback,
         private val activity: Activity
     ) : Window.Callback {
 
         override fun dispatchTouchEvent(event: MotionEvent): Boolean {
-            // never intercept inside ad screen (extra safety)
             if (activity !is AdPlayerActivity && event.action == MotionEvent.ACTION_UP) {
-                // only in CLICKS mode will it actually increment
                 AdsSdk.registerClick()
-
-                // only in CLICKS mode will it potentially show
                 AdsSdk.maybeShowAd { activity }
             }
             return base.dispatchTouchEvent(event)
@@ -377,6 +427,11 @@ object AdsSdk {
     // ---------------------------
     // INTERVAL scheduler
     // ---------------------------
+
+    /**
+     * Starts or stops the interval-based ad scheduler
+     * based on current app and config state.
+     */
     private fun startOrStopIntervalScheduler() {
         if (!initialized || !isAppOpen.get()) {
             intervalJob?.cancel()
@@ -394,12 +449,16 @@ object AdsSdk {
         if (intervalJob?.isActive == true) return
 
         intervalJob = scope.launch {
-            while (isActive && initialized && isAppOpen.get()
-                && config.trigger.type.equals("INTERVAL", ignoreCase = true)) {
+            while (
+                isActive &&
+                initialized &&
+                isAppOpen.get() &&
+                config.trigger.type.equals("INTERVAL", ignoreCase = true)
+            ) {
 
                 val act = currentActivityRef?.get()
 
-                // if no activity or we're on ad screen, retry
+                // Wait until a valid activity is available
                 if (act == null || act is AdPlayerActivity) {
                     delay(500)
                     continue
@@ -408,7 +467,6 @@ object AdsSdk {
                 val seconds = (config.trigger.seconds ?: 120).coerceAtLeast(10)
                 val now = System.currentTimeMillis()
 
-                // start counting from "now" if first run
                 if (lastAdShownAtMs == 0L) {
                     lastAdShownAtMs = now
                 }
